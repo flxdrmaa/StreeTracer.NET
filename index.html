@@ -3,233 +3,371 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STREETRACER.NET // LS_UNDERGROUND</title>
+    <title>STREETRACER.NET // ENCRYPTED GATEWAY</title>
+    
+    <!-- 1. TAILWIND CSS (Styling) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. SUPABASE JS (Database) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- 3. FONT: JETBRAINS MONO (Hacker Style) -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- 4. CONFIG TAILWIND -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['"JetBrains Mono"', 'monospace'] },
+                    colors: {
+                        'neon-red': '#ff003c',
+                        'dark-bg': '#050505',
+                        'panel-bg': '#0a0a0a',
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 5. CUSTOM CSS (Efek Visual) -->
     <style>
-        body { font-family: 'Courier New', monospace; background: #050505; color: #00ff41; }
-        .neon-border { border: 1px solid #00ff41; box-shadow: 0 0 10px rgba(0,255,65,0.2); }
-        .hidden { display: none; }
-        input, textarea { background: #0a0a0a !important; border: 1px solid #1a1a1a !important; color: #00ff41 !important; outline: none; padding: 8px; }
-        input:focus { border-color: #00ff41 !important; }
-        .post-card { border-left: 3px solid #00ff41; background: rgba(0, 255, 65, 0.02); padding: 15px; margin-bottom: 20px; }
+        /* Efek Garis Scanline ala TV Tua */
+        .scanline {
+            width: 100%; height: 100px; z-index: 10;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(255, 0, 60, 0.03) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1; position: absolute; bottom: 100%;
+            animation: scanline 10s linear infinite; pointer-events: none;
+        }
+        @keyframes scanline { 0% { bottom: 100%; } 100% { bottom: -100%; } }
+        
+        /* Loading Spinner */
+        .loader {
+            border: 2px solid #333; border-top: 2px solid #ff003c;
+            border-radius: 50%; width: 14px; height: 14px;
+            animation: spin 1s linear infinite; display: inline-block; vertical-align: middle;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Input Autofill Fix (Biar gak jadi putih backgroundnya) */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #000 inset !important;
+            -webkit-text-fill-color: white !important;
+            caret-color: white;
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="bg-dark-bg text-gray-300 font-mono min-h-screen flex flex-col items-center justify-center relative overflow-hidden selection:bg-neon-red selection:text-white">
 
-    <!-- GATE: LOGIN -->
-    <div id="auth-gate" class="max-w-md mx-auto mt-20 p-6 neon-border bg-black">
-        <h1 class="text-center font-bold mb-6 text-xl tracking-[0.3em]">STREETRACER.NET</h1>
-        <div class="flex border-b border-green-900 mb-6 text-[10px]">
-            <button onclick="setAuthMode('login')" id="btn-login" class="flex-1 py-2 bg-green-900 text-black font-bold">LOGIN</button>
-            <button onclick="setAuthMode('register')" id="btn-reg" class="flex-1 py-2 hover:bg-green-900/20">REGISTER</button>
-        </div>
-        <div class="space-y-4">
-            <input type="email" id="email" placeholder="RACER_EMAIL" class="w-full text-sm">
-            <input type="password" id="password" placeholder="ACCESS_CODE" class="w-full text-sm">
-            <button onclick="handleAuth()" class="w-full bg-green-900 text-black font-bold py-2 text-xs uppercase hover:bg-green-400">[ Execute_Infiltration ]</button>
-        </div>
-        <p id="auth-msg" class="text-[10px] text-red-600 mt-4 text-center"></p>
-    </div>
+    <!-- Background Grid -->
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#111_1px,transparent_1px),linear-gradient(to_bottom,#111_1px,transparent_1px)] bg-[size:24px_24px] -z-10"></div>
+    <div class="scanline"></div>
 
-    <!-- MAIN DASHBOARD -->
-    <div id="dashboard" class="hidden max-w-6xl mx-auto">
-        <header class="flex justify-between items-center border-b border-green-900 pb-4 mb-8">
-            <div class="text-[10px] font-bold">
-                CONNECTED_AS: <span id="user-display" class="text-white"></span>
-            </div>
-            <button onclick="logout()" class="text-[10px] text-red-600 underline">[ TERMINATE_SESSION ]</button>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <!-- Sidebar Navigation -->
-            <div class="space-y-2">
-                <button onclick="showTab('feed')" class="w-full text-left p-2 bg-green-900 text-black text-xs font-bold uppercase">>> GLOBAL_FEED</button>
-                <button onclick="showTab('clubs')" class="w-full text-left p-2 border border-green-900 text-xs font-bold uppercase hover:bg-green-900/10">>> DIRECTORY_CLUBS</button>
-                <div id="leader-section" class="hidden pt-4">
-                    <p class="text-[10px] text-red-600 font-bold mb-2">// CREW_ADMIN_PANEL</p>
-                    <button onclick="showTab('admin')" class="w-full text-left p-2 border border-red-900 text-xs text-red-500 font-bold uppercase hover:bg-red-900/10">>> MANAGE_REQUESTS</button>
-                </div>
-            </div>
-
-            <!-- Tab: Global Feed -->
-            <div id="tab-feed" class="md:col-span-3 space-y-6">
-                <div class="border border-green-900 p-4 bg-black">
-                    <p class="text-[10px] text-zinc-600 mb-2 uppercase font-bold">// Create_Transmission</p>
-                    <textarea id="post-content" class="w-full text-xs h-20 mb-2" placeholder="Intel, Race Invites..."></textarea>
-                    <input type="text" id="post-img" class="w-full text-[10px]" placeholder="Direct Image Link (i.ibb.co/xyz.jpg)">
-                    <button onclick="submitPost()" class="mt-4 bg-green-900 text-black px-6 py-1 text-xs font-bold uppercase hover:bg-green-400">Broadcast</button>
-                </div>
-                <div id="feed-items">
-                    <p class="text-[10px] animate-pulse">Scanning for incoming data...</p>
-                </div>
-            </div>
-
-            <!-- Tab: Clubs -->
-            <div id="tab-clubs" class="hidden md:col-span-3 space-y-6">
-                <div class="border border-green-900 p-4 bg-black">
-                    <h3 class="text-xs font-bold mb-4 italic text-green-700 underline">// ESTABLISH_NEW_CREW</h3>
-                    <input type="text" id="crew-name" class="w-full text-xs mb-2" placeholder="CREW_NAME">
-                    <textarea id="crew-desc" class="w-full text-xs h-16 mb-2" placeholder="CREW_DESCRIPTION"></textarea>
-                    <button onclick="registerCrew()" class="bg-green-900 text-black px-6 py-1 text-xs font-bold uppercase">Register_Crew</button>
-                </div>
-                <div id="clubs-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            </div>
-
-            <!-- Tab: Admin (Leader Only) -->
-            <div id="tab-admin" class="hidden md:col-span-3 space-y-4">
-                <h2 class="text-sm font-bold bg-red-900 text-black p-2 uppercase italic">Pending_Infiltration_Requests</h2>
-                <div id="pending-requests" class="space-y-2"></div>
+    <!-- NOTIFICATION AREA (Hidden by default) -->
+    <div id="notification-area" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-sm transition-all duration-300 opacity-0 pointer-events-none translate-y-[-20px]">
+        <div id="notif-box" class="bg-black border-l-4 border-neon-red p-4 shadow-[0_0_30px_rgba(0,0,0,1)] flex items-start gap-3">
+            <div id="notif-icon" class="text-neon-red text-xl font-bold">⚠️</div>
+            <div>
+                <h4 id="notif-title" class="text-white text-xs font-bold uppercase tracking-wider mb-1">SYSTEM ALERT</h4>
+                <p id="notif-msg" class="text-zinc-400 text-[10px] leading-tight">Access Denied.</p>
             </div>
         </div>
     </div>
 
-    <script>
-        const SB_URL = "https://zgnfpqqvacixawymldnb.supabase.co";
-        const SB_KEY = "sb_secret_MLMH_o1tS5UZe_Us8uriIA_hAEpx0eY";
-        const DISCORD_WEBHOOK = "YOUR_DISCORD_WEBHOOK";
+    <!-- Main Container -->
+    <div class="w-full max-w-md p-4 relative z-20">
+        
+        <!-- Header / Logo -->
+        <div class="text-center mb-8 select-none">
+            <div class="inline-block px-3 py-1 border border-neon-red/30 rounded-full mb-3 bg-red-900/10">
+                <span class="w-2 h-2 rounded-full bg-red-600 inline-block animate-pulse-fast mr-2"></span>
+                <span class="text-[10px] text-neon-red uppercase tracking-widest">Live Node</span>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tighter text-white drop-shadow-[0_0_10px_rgba(255,0,60,0.5)]">
+                STREETRACER<span class="text-neon-red">.NET</span>
+            </h1>
+            <p class="text-[10px] text-zinc-500 uppercase mt-2 tracking-[0.2em]">San Andreas Underground Network</p>
+        </div>
 
-        const supabase = supabase.createClient(SB_URL, SB_KEY);
-        let authMode = 'login';
-        let userEmail = "";
+        <!-- Auth Box -->
+        <div class="bg-panel-bg border border-zinc-800 shadow-[0_0_40px_rgba(0,0,0,0.5)] rounded-sm overflow-hidden relative">
+            
+            <!-- Tabs (Login vs Register) -->
+            <div class="flex border-b border-zinc-800">
+                <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-4 text-xs font-bold bg-zinc-900 text-white border-b-2 border-neon-red transition-all tracking-widest hover:bg-zinc-800">
+                    // LOGIN
+                </button>
+                <button onclick="switchTab('register')" id="tab-register" class="flex-1 py-4 text-xs font-bold bg-dark-bg text-zinc-600 border-b-2 border-transparent hover:text-white transition-all tracking-widest hover:bg-zinc-900">
+                    // REGISTER
+                </button>
+            </div>
 
-        // --- AUTH ---
-        function setAuthMode(m) {
-            authMode = m;
-            document.getElementById('btn-login').className = m === 'login' ? 'flex-1 py-2 bg-green-900 text-black font-bold' : 'flex-1 py-2 hover:bg-green-900/20';
-            document.getElementById('btn-reg').className = m === 'register' ? 'flex-1 py-2 bg-green-900 text-black font-bold' : 'flex-1 py-2 hover:bg-green-900/20';
-        }
-
-        async function handleAuth() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const msg = document.getElementById('auth-msg');
-
-            const { data, error } = authMode === 'login' 
-                ? await supabase.auth.signInWithPassword({ email, password })
-                : await supabase.auth.signUp({ email, password });
-
-            if(error) msg.innerText = "ACCESS_DENIED: " + error.message;
-            else location.reload();
-        }
-
-        async function checkUser() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if(user) {
-                userEmail = user.email;
-                document.getElementById('auth-gate').classList.add('hidden');
-                document.getElementById('dashboard').classList.remove('hidden');
-                document.getElementById('user-display').innerText = user.email.split('@')[0].toUpperCase();
-                loadFeed();
-                checkIfLeader();
-            }
-        }
-
-        function logout() { supabase.auth.signOut(); location.reload(); }
-
-        // --- FEED LOGIC ---
-        async function loadFeed() {
-            const { data: posts } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
-            const container = document.getElementById('feed-items');
-            container.innerHTML = posts.map(p => `
-                <div class="post-card">
-                    <div class="flex justify-between text-[9px] mb-2 font-bold italic text-green-800">
-                        <span>@${p.username}</span>
-                        <span>${new Date(p.created_at).toLocaleString()}</span>
+            <!-- Content Area -->
+            <div class="p-8">
+                
+                <!-- LOGIN FORM -->
+                <form id="form-login" class="space-y-5 block animate-[fadeIn_0.3s_ease-out]">
+                    <div>
+                        <label class="block text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">Identity (Email)</label>
+                        <div class="relative">
+                            <input type="email" id="login-email" placeholder="user@streetracer.net" class="w-full bg-black border border-zinc-800 p-3 text-sm focus:border-neon-red focus:outline-none focus:shadow-[0_0_15px_rgba(255,0,60,0.2)] text-white transition-all placeholder-zinc-800" required>
+                        </div>
                     </div>
-                    <p class="text-xs mb-3 text-zinc-300">${p.content}</p>
-                    ${p.image_url ? `<img src="${p.image_url}" class="w-full border border-zinc-900 opacity-70">` : ''}
-                </div>
-            `).join('');
+                    <div>
+                        <label class="block text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">Passphrase</label>
+                        <input type="password" id="login-password" placeholder="••••••••••••" class="w-full bg-black border border-zinc-800 p-3 text-sm focus:border-neon-red focus:outline-none focus:shadow-[0_0_15px_rgba(255,0,60,0.2)] text-white transition-all placeholder-zinc-800" required>
+                    </div>
+                    
+                    <button type="submit" id="btn-login" class="w-full bg-neon-red text-black font-bold py-3 mt-2 hover:bg-white hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-all text-xs tracking-[0.2em] uppercase clip-path-polygon">
+                        Decrypt & Enter
+                    </button>
+                </form>
+
+                <!-- REGISTER FORM -->
+                <form id="form-register" class="space-y-4 hidden animate-[fadeIn_0.3s_ease-out]">
+                    <div class="p-3 bg-red-950/20 border border-red-900/30 text-red-500 text-[10px] mb-2 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>REQUIREMENT: Domain <b>@streetracer.net</b></span>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">IC Name (SAMP)</label>
+                        <input type="text" id="reg-icname" placeholder="Toretto_Dominic" class="w-full bg-black border border-zinc-800 p-3 text-sm focus:border-neon-red focus:outline-none text-white transition-all placeholder-zinc-800" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">Secure Email</label>
+                        <input type="email" id="reg-email" placeholder="name@streetracer.net" class="w-full bg-black border border-zinc-800 p-3 text-sm focus:border-neon-red focus:outline-none text-white transition-all placeholder-zinc-800" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] uppercase text-zinc-500 mb-1 tracking-wider">Set Password</label>
+                        <input type="password" id="reg-password" placeholder="••••••••••••" class="w-full bg-black border border-zinc-800 p-3 text-sm focus:border-neon-red focus:outline-none text-white transition-all placeholder-zinc-800" required>
+                    </div>
+
+                    <button type="submit" id="btn-register" class="w-full border border-neon-red text-neon-red font-bold py-3 mt-2 hover:bg-neon-red hover:text-black hover:shadow-[0_0_20px_rgba(255,0,60,0.4)] transition-all text-xs tracking-[0.2em] uppercase">
+                        Initiate Protocol
+                    </button>
+                </form>
+
+            </div>
+
+            <!-- Footer Status -->
+            <div class="bg-black py-2 px-4 border-t border-zinc-900 flex justify-between items-center text-[9px] text-zinc-700 uppercase tracking-widest">
+                <span>Status: UNSECURED</span>
+                <span>v3.0.1</span>
+            </div>
+        </div>
+        
+        <p class="text-center text-[10px] text-zinc-800 mt-6">
+            UNAUTHORIZED ACCESS IS A FEDERAL OFFENSE. <br> IP ADDRESS LOGGED.
+        </p>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- LOGIC JAVASCRIPT (WAJIB EDIT BAGIAN BAWAH) -->
+    <!-- ============================================== -->
+    <script>
+        // ================================================
+        // 1. CONFIG: MASUKKAN KUNCI SUPABASE DI SINI !!!
+        // ================================================
+        const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi';
+        
+        // ================================================
+        // 2. HELPER FUNCTIONS (UI Logic)
+        // ================================================
+        
+        // Fungsi Notifikasi Popup
+        function showNotification(title, message, type = 'error') {
+            const area = document.getElementById('notification-area');
+            const box = document.getElementById('notif-box');
+            const titleEl = document.getElementById('notif-title');
+            const msgEl = document.getElementById('notif-msg');
+            const iconEl = document.getElementById('notif-icon');
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            
+            // Tampilkan (Hapus class hidden/opacity)
+            area.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-20px]');
+            area.classList.add('opacity-100', 'translate-y-0');
+
+            // Ganti Warna berdasarkan tipe
+            if (type === 'success') {
+                box.classList.replace('border-neon-red', 'border-green-500');
+                iconEl.textContent = '✓';
+                iconEl.className = 'text-green-500 text-xl font-bold';
+            } else {
+                box.classList.replace('border-green-500', 'border-neon-red');
+                iconEl.textContent = '⚠️';
+                iconEl.className = 'text-neon-red text-xl font-bold';
+            }
+
+            // Hilangkan otomatis setelah 3.5 detik
+            setTimeout(() => {
+                area.classList.remove('opacity-100', 'translate-y-0');
+                area.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-20px]');
+            }, 3500);
         }
 
-        async function submitPost() {
-            const content = document.getElementById('post-content').value;
-            const img = document.getElementById('post-img').value;
-            const username = userEmail.split('@')[0];
+        // Fungsi Loading Tombol
+        function setLoading(btnId, isLoading, defaultText) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
 
-            if(!content) return;
-
-            const { error } = await supabase.from('posts').insert([{ username, content, image_url: img }]);
-            if(!error) {
-                sendDiscordNotif(content);
-                document.getElementById('post-content').value = "";
-                document.getElementById('post-img').value = "";
-                loadFeed();
+            if (isLoading) {
+                btn.innerHTML = '<span class="loader mr-2"></span> PROCESSING...';
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.innerHTML = defaultText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
-        // --- DISCORD WEBHOOK (MASKED) ---
-        async function sendDiscordNotif(text) {
-            const masked = "OPERATOR_" + Math.random().toString(36).substring(7).toUpperCase();
-            const payload = {
-                username: "WATCHDOG",
-                embeds: [{
-                    title: "🚨 TRANSMISI BARU",
-                    description: `**PENGIRIM:** \`${masked}\`\n\n**DATA:**\n"${text}"\n\n[OPEN_NETWORK](https://streetracer.vercel.app)`,
-                    color: 3066993,
-                    timestamp: new Date()
-                }]
-            };
-            await fetch(DISCORD_WEBHOOK, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
-        }
+        // Fungsi Ganti Tab
+        window.switchTab = function(tab) {
+            const loginForm = document.getElementById('form-login');
+            const registerForm = document.getElementById('form-register');
+            const loginTab = document.getElementById('tab-login');
+            const registerTab = document.getElementById('tab-register');
 
-        // --- CLUBS LOGIC ---
-        async function loadClubs() {
-            const { data: clubs } = await supabase.from('crews').select('*');
-            const list = document.getElementById('clubs-list');
-            list.innerHTML = clubs.map(c => `
-                <div class="border border-zinc-800 p-4 bg-zinc-900/10">
-                    <p class="text-xs font-bold text-green-500">${c.name}</p>
-                    <p class="text-[10px] text-zinc-500 mb-4">${c.description}</p>
-                    <button onclick="joinCrew('${c.id}')" class="text-[9px] border border-green-900 px-2 py-1 hover:bg-green-900 hover:text-black font-bold uppercase">[ Request_Infiltration ]</button>
-                </div>
-            `).join('');
-        }
-
-        async function registerCrew() {
-            const name = document.getElementById('crew-name').value;
-            const description = document.getElementById('crew-desc').value;
-            await supabase.from('crews').insert([{ name, description, leader_email: userEmail }]);
-            location.reload();
-        }
-
-        async function joinCrew(crewId) {
-            await supabase.from('crew_members').insert([{ crew_id: crewId, user_email: userEmail, status: 'PENDING' }]);
-            alert("REQUEST SENT TO CREW LEADER.");
-        }
-
-        async function checkIfLeader() {
-            const { data: leaderOf } = await supabase.from('crews').select('*').eq('leader_email', userEmail);
-            if(leaderOf.length > 0) {
-                document.getElementById('leader-section').classList.remove('hidden');
-                loadPendingRequests(leaderOf[0].id);
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                
+                loginTab.classList.add('bg-zinc-900', 'text-white', 'border-neon-red');
+                loginTab.classList.remove('bg-dark-bg', 'text-zinc-600', 'border-transparent');
+                
+                registerTab.classList.remove('bg-zinc-900', 'text-white', 'border-neon-red');
+                registerTab.classList.add('bg-dark-bg', 'text-zinc-600', 'border-transparent');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                
+                registerTab.classList.add('bg-zinc-900', 'text-white', 'border-neon-red');
+                registerTab.classList.remove('bg-dark-bg', 'text-zinc-600', 'border-transparent');
+                
+                loginTab.classList.remove('bg-zinc-900', 'text-white', 'border-neon-red');
+                loginTab.classList.add('bg-dark-bg', 'text-zinc-600', 'border-transparent');
             }
         }
 
-        async function loadPendingRequests(crewId) {
-            const { data: reqs } = await supabase.from('crew_members').select('*').eq('crew_id', crewId).eq('status', 'PENDING');
-            document.getElementById('pending-requests').innerHTML = reqs.map(r => `
-                <div class="flex justify-between items-center border border-zinc-800 p-2">
-                    <span class="text-xs">${r.user_email}</span>
-                    <button onclick="approveMember(${r.id})" class="bg-green-900 text-black text-[10px] font-bold px-2 py-1 uppercase">Approve</button>
-                </div>
-            `).join('');
-        }
+        // ================================================
+        // 3. MAIN LOGIC (Eksekusi saat halaman siap)
+        // ================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("System Initializing...");
 
-        async function approveMember(id) {
-            await supabase.from('crew_members').update({ status: 'APPROVED' }).eq('id', id);
-            location.reload();
-        }
+            // Cek Kunci API
+            if (!SUPABASE_URL || !SUPABASE_KEY || SUPABASE_URL.includes("MASUKKAN")) {
+                showNotification("SYSTEM ERROR", "Supabase API Key not configured in code!", "error");
+                document.getElementById('btn-login').disabled = true;
+                document.getElementById('btn-register').disabled = true;
+                return;
+            }
 
-        function showTab(t) {
-            ['tab-feed', 'tab-clubs', 'tab-admin'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById('tab-' + t).classList.remove('hidden');
-            if(t === 'clubs') loadClubs();
-        }
+            // Init Supabase
+            let supabase;
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log("Database Connection: OK");
+            } catch (err) {
+                console.error(err);
+                showNotification("CONNECTION FAILED", "Could not reach database.");
+                return;
+            }
 
-        checkUser();
-        setInterval(loadFeed, 30000); // Auto refresh feed 30s
+            // --- EVENT: LOGIN ---
+            const loginForm = document.getElementById('form-login');
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+
+                setLoading('btn-login', true, 'DECRYPT & ENTER');
+
+                // Validasi Domain
+                if (!email.includes('@streetracer.net')) {
+                    showNotification('ACCESS DENIED', 'Invalid Domain. Use @streetracer.net identity.');
+                    setLoading('btn-login', false, 'DECRYPT & ENTER');
+                    return;
+                }
+
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: password,
+                    });
+
+                    if (error) throw error;
+
+                    showNotification('ACCESS GRANTED', 'Decryption successful. Redirecting...', 'success');
+                    
+                    // Redirect setelah 1.5 detik
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html'; 
+                    }, 1500);
+
+                } catch (error) {
+                    let msg = error.message;
+                    if(msg.includes('Invalid login')) msg = "Incorrect identity or passphrase.";
+                    showNotification('LOGIN FAILED', msg);
+                } finally {
+                    setLoading('btn-login', false, 'DECRYPT & ENTER');
+                }
+            });
+
+            // --- EVENT: REGISTER ---
+            const registerForm = document.getElementById('form-register');
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                console.log("Registration Initiated");
+
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const icName = document.getElementById('reg-icname').value;
+
+                setLoading('btn-register', true, 'INITIATE PROTOCOL');
+
+                // Validasi Domain
+                if (!email.endsWith('@streetracer.net')) {
+                    showNotification('PROTOCOL VIOLATION', 'Registration requires an @streetracer.net email.');
+                    setLoading('btn-register', false, 'INITIATE PROTOCOL');
+                    return;
+                }
+
+                try {
+                    const { data, error } = await supabase.auth.signUp({
+                        email: email,
+                        password: password,
+                        options: {
+                            data: { ic_name: icName } // Simpan IC Name di metadata
+                        }
+                    });
+
+                    if (error) throw error;
+
+                    showNotification('IDENTITY ESTABLISHED', 'Verification link sent to your secure inbox.', 'success');
+                    setTimeout(() => switchTab('login'), 2000);
+
+                } catch (error) {
+                    console.error(error);
+                    showNotification('REGISTRATION ERROR', error.message);
+                } finally {
+                    setLoading('btn-register', false, 'INITIATE PROTOCOL');
+                }
+            });
+        });
     </script>
 </body>
 </html>
