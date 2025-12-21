@@ -318,14 +318,17 @@
                 // ---------------------------------------------------------
                 // PROSES REGISTER
                 // ---------------------------------------------------------
-                const { data, error } = await supabase.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: { 
-                        data: { ic_name: icName } // Simpan nama di metadata dulu
-                    }
-                });
-
+               const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+    options: { 
+        data: { 
+            ic_name: icName,
+            // TAMBAHKAN user_ip DI SINI:
+            user_ip: ip 
+        } 
+    }
+});
                 if(error) throw error;
 
                 // UPDATE PROFILE: Simpan IP User ke database agar tidak bisa daftar lagi
