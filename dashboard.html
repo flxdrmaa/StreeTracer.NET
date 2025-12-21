@@ -3,303 +3,426 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TERM::DASHBOARD</title>
+    <title>TOR::STREETRACER.NET</title>
     
     <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-    
-    <!-- ICONS (Lucide) -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: { terminal: ['"VT323"', 'monospace'] },
-                    colors: { 'neon-red': '#ff0000', 'dark-red': '#3a0000', 'term-black': '#050505' },
-                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                    colors: { 'neon-red': '#ff0000', 'term-bg': '#050505' },
+                    animation: { 'pulse-fast': 'pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
                 }
             }
         }
     </script>
-
     <style>
-        body { background-color: #000; color: #ff0000; font-family: 'VT323', monospace; touch-action: manipulation; }
-        
-        /* SCROLLBAR KEREN */
-        ::-webkit-scrollbar { width: 4px; }
+        body { background: #000; color: #ff0000; font-family: 'VT323', monospace; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { background: #ff0000; }
-
-        /* KOTAK TERMINAL */
-        .term-box {
-            background: rgba(10, 10, 10, 0.9);
-            border: 1px solid #333;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            position: relative;
-        }
-        .term-header {
-            background: #111; border-bottom: 1px solid #333; padding: 5px 10px;
-            font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .term-content { padding: 15px; }
-
-        /* SCANLINE & NOISE */
-        .scanline {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 4px; pointer-events: none; z-index: 50;
-        }
-        .loading-screen {
-            position: fixed; inset: 0; background: black; z-index: 100;
-            display: flex; flex-col: column; align-items: center; justify-content: center;
-        }
+        ::-webkit-scrollbar-thumb { background: #500; border: 1px solid #000; }
+        
+        .term-card { background: #050505; border: 1px solid #333; border-left: 2px solid #ff0000; margin-bottom: 1rem; }
+        .term-header { background: #111; padding: 4px 8px; font-size: 0.9rem; color: #888; border-bottom: 1px solid #333; }
+        .term-btn { border: 1px solid #333; background: #000; color: #888; text-transform: uppercase; padding: 4px 12px; cursor: pointer; transition: 0.2s; }
+        .term-btn:hover { border-color: #ff0000; color: #ff0000; }
+        .term-btn.active { background: #ff0000; color: #000; border-color: #ff0000; font-weight: bold; }
+        
+        .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        
+        /* Modal Style */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
     </style>
 </head>
-<body class="min-h-screen relative overflow-x-hidden pb-10">
+<body class="min-h-screen flex flex-col">
 
-    <!-- EFEK VISUAL -->
     <div class="fixed inset-0 pointer-events-none opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0"></div>
     <div class="scanline"></div>
 
-    <!-- LOADING SCREEN (Biar user gak liat data kosong dulu) -->
-    <div id="loading-screen" class="loading-screen">
-        <div class="text-2xl animate-pulse">> CONNECTING_TO_NODE...</div>
-        <div class="text-xs text-zinc-500 mt-2">ENCRYPTING CONNECTION (AES-256)</div>
-    </div>
-
     <!-- NAVBAR -->
-    <nav class="border-b border-zinc-800 bg-black/90 sticky top-0 z-40 backdrop-blur-sm">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 bg-red-600 rounded-full animate-pulse"></span>
-                <span class="text-xl tracking-widest font-bold">STREETRACER<span class="text-zinc-600">.NET</span></span>
+    <nav class="h-14 border-b border-zinc-900 bg-black sticky top-0 z-40 flex items-center justify-between px-4">
+        <h1 class="text-2xl font-bold tracking-widest text-white cursor-default">STREETRACER<span class="text-neon-red">.NET</span></h1>
+        <div class="flex items-center gap-4">
+            <div class="text-right leading-none hidden sm:block">
+                <div id="nav-ic-name" class="text-lg text-white">UNKNOWN</div>
             </div>
-            <button id="btn-logout" class="border border-red-900 px-3 py-1 text-sm hover:bg-red-900 hover:text-white transition-colors">
-                [ DISCONNECT ]
-            </button>
+            <button id="btn-logout" class="term-btn text-xs">[ LOGOUT ]</button>
         </div>
     </nav>
 
-    <!-- CONTENT GRID -->
-    <main class="max-w-6xl mx-auto p-4 grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10 mt-4">
+    <!-- LAYOUT GRID -->
+    <div class="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 relative z-10">
         
-        <!-- KOLOM KIRI: PROFILE -->
-        <div class="term-box md:col-span-1 h-fit">
-            <div class="term-header"><span>// DRIVER_PROFILE</span> <span>UID: <span id="disp-uid">...</span></span></div>
-            <div class="term-content text-center space-y-4">
-                
-                <!-- Avatar / Icon -->
-                <div class="inline-block p-4 border border-zinc-700 rounded-full bg-zinc-900 mb-2">
-                    <i data-lucide="user" class="w-10 h-10 text-red-500"></i>
-                </div>
-
-                <!-- Info Utama -->
-                <div>
-                    <h2 id="user-ic-name" class="text-2xl text-white font-bold tracking-wider glitch-text">LOADING...</h2>
-                    <p class="text-zinc-500 text-sm mt-1">> RANK: <span id="user-rank" class="text-red-400">ROOKIE</span></p>
-                </div>
-
-                <!-- Stats Bar -->
-                <div class="text-left bg-zinc-900 p-3 border border-zinc-800 text-sm space-y-2">
-                    <div class="flex justify-between">
-                        <span class="text-zinc-500">REPUTATION</span>
-                        <span id="user-rep" class="text-white">0</span>
-                    </div>
-                    <div class="w-full bg-zinc-800 h-2">
-                        <div id="rep-bar" class="bg-red-600 h-2" style="width: 0%"></div>
-                    </div>
-                    
-                    <div class="flex justify-between pt-2">
-                        <span class="text-zinc-500">IP ADDR</span>
-                        <span id="user-ip" class="text-zinc-600 blur-[2px] hover:blur-0 cursor-help transition-all">HIDDEN</span>
-                    </div>
-                </div>
-
-                <!-- Vehicle -->
-                <div class="border-t border-zinc-800 pt-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-zinc-500 text-sm">ACTIVE VEHICLE</span>
-                        <button class="text-[10px] border border-zinc-700 px-1 hover:bg-zinc-800">[ CHANGE ]</button>
-                    </div>
-                    <div class="flex items-center gap-3 bg-zinc-950 p-2 border border-zinc-800">
-                        <i data-lucide="car-front" class="text-zinc-600"></i>
-                        <div class="text-left">
-                            <div id="user-car" class="text-lg leading-none">NONE</div>
-                            <div class="text-[10px] text-zinc-600">NO MODIFICATIONS</div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- KOLOM TENGAH & KANAN: FEED & MENU -->
-        <div class="md:col-span-2 space-y-4">
+        <!-- SIDEBAR KIRI: CLUB LIST -->
+        <aside class="hidden lg:block lg:col-span-1 space-y-4 h-[calc(100vh-100px)] overflow-y-auto pr-2">
             
-            <!-- STATUS ALERT -->
-            <div class="term-box border-l-4 border-l-red-600">
-                <div class="p-3 flex items-start gap-3 bg-red-950/10">
-                    <i data-lucide="siren" class="text-red-500 animate-pulse"></i>
+            <!-- Mini Profile -->
+            <div class="term-card p-4 text-center">
+                <i data-lucide="user" class="w-10 h-10 mx-auto text-zinc-600 mb-2"></i>
+                <h2 id="side-ic-name" class="text-xl text-white leading-none">LOADING...</h2>
+                <div class="text-zinc-500 text-sm mt-2 pt-2 border-t border-zinc-900">OPERATIVE_STATUS: ACTIVE</div>
+            </div>
+
+            <!-- Club List Container -->
+            <div class="term-card">
+                <div class="term-header flex justify-between items-center">
+                    <span>> KNOWN_CREWS</span>
+                    <button onclick="openCreateClubModal()" class="text-xs text-neon-red hover:underline hover:text-white">[ + NEW ]</button>
+                </div>
+                <div id="club-list" class="flex flex-col">
+                    <div class="p-4 text-center text-zinc-600 text-sm">SCANNING_NETWORK...</div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- TENGAH: FEED -->
+        <main class="lg:col-span-2 space-y-4 pb-20">
+            <!-- INPUT POST -->
+            <div class="term-card p-4">
+                <div class="flex gap-2 mb-2 text-zinc-500 text-sm"><span>> BROADCAST_MESSAGE</span><span class="animate-pulse-fast">_</span></div>
+                <textarea id="post-content" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500" rows="2" placeholder="Write encrypted message..."></textarea>
+                <div id="img-input-area" class="hidden mt-2 border-l-2 border-zinc-800 pl-2">
+                    <input type="text" id="post-img-url" class="w-full bg-black border border-zinc-800 text-white p-1 text-sm" placeholder="Image URL (https://...)">
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden')" class="text-zinc-500 hover:text-white text-sm">[ + IMG ]</button>
+                    <button id="btn-post" class="term-btn text-white border-red-900 bg-red-900/10 hover:bg-red-900">> SEND</button>
+                </div>
+            </div>
+
+            <!-- FEED CONTAINER -->
+            <div id="feed-container" class="space-y-4">
+                <!-- Posts will appear here -->
+            </div>
+        </main>
+
+        <!-- KANAN: WIDGET (ADS) -->
+        <aside class="hidden lg:block lg:col-span-1">
+            <div class="term-card p-3">
+                <div class="text-red-500 mb-2 blink-text">>> BLACK_MARKET</div>
+                <div class="text-zinc-400 text-sm border-b border-zinc-800 pb-2 mb-2">
+                    <span class="text-white">NITROUS_V2</span><br>
+                    Stock: 5 Units | Price: $500
+                </div>
+                <div class="text-zinc-400 text-sm">
+                    <span class="text-white">FAKE_PLATES</span><br>
+                    Untraceable. Contact: Anon
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODALS (POPUP) -->
+    <!-- ============================================ -->
+
+    <!-- 1. MODAL DETAIL CLUB & JOIN -->
+    <div id="modal-club-info" class="modal-overlay hidden">
+        <div class="term-card w-full max-w-md p-6 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
+            <div class="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
+                <h2 id="modal-club-name" class="text-2xl text-white font-bold">CLUB_NAME</h2>
+                <button onclick="closeModals()" class="text-zinc-500 hover:text-red-500">[X]</button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <div class="text-zinc-500 text-xs">DESCRIPTION</div>
+                    <div id="modal-club-desc" class="text-zinc-300 text-sm mt-1">...</div>
+                </div>
+                <div class="flex gap-4">
                     <div>
-                        <h3 class="text-lg font-bold leading-none mb-1">POLICE RADAR: ACTIVE</h3>
-                        <p class="text-sm text-zinc-400">High police activity reported in <span class="text-white">Market Station</span>. Avoid sector 7.</p>
+                        <div class="text-zinc-500 text-xs">LEADER</div>
+                        <div id="modal-club-leader" class="text-white text-sm">UNKNOWN</div>
+                    </div>
+                    <div>
+                        <div class="text-zinc-500 text-xs">MEMBERS</div>
+                        <div id="modal-club-count" class="text-white text-sm">0</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- MENU GRID -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button class="term-box p-4 flex flex-col items-center gap-2 hover:bg-red-900/20 transition-colors group">
-                    <i data-lucide="map" class="group-hover:text-white transition-colors"></i>
-                    <span class="text-sm">RACE MAP</span>
-                </button>
-                <button class="term-box p-4 flex flex-col items-center gap-2 hover:bg-red-900/20 transition-colors group">
-                    <i data-lucide="trophy" class="group-hover:text-white transition-colors"></i>
-                    <span class="text-sm">EVENTS</span>
-                </button>
-                <button class="term-box p-4 flex flex-col items-center gap-2 hover:bg-red-900/20 transition-colors group">
-                    <i data-lucide="shopping-bag" class="group-hover:text-white transition-colors"></i>
-                    <span class="text-sm">MARKET</span>
-                </button>
-                <button class="term-box p-4 flex flex-col items-center gap-2 hover:bg-red-900/20 transition-colors group">
-                    <i data-lucide="settings" class="group-hover:text-white transition-colors"></i>
-                    <span class="text-sm">CONFIG</span>
-                </button>
-            </div>
-
-            <!-- LIVE CHAT / LOG -->
-            <div class="term-box flex-1 flex flex-col">
-                <div class="term-header">
-                    <span>// ENCRYPTED_FEED_V2</span>
-                    <span class="text-[10px] text-green-500">LIVE</span>
-                </div>
-                <div id="chat-feed" class="term-content h-64 overflow-y-auto space-y-1 text-sm font-mono bg-black/50">
-                    <!-- Chat logs will be injected here via JS -->
-                </div>
-                <div class="p-2 border-t border-zinc-800 flex gap-2">
-                    <span class="text-zinc-500">></span>
-                    <input type="text" placeholder="Broadcast message..." class="bg-transparent w-full outline-none text-white placeholder-zinc-700" disabled>
+                <!-- Status User di Club ini -->
+                <div id="modal-club-status" class="p-2 border border-zinc-800 bg-zinc-900 text-center text-xs text-zinc-400 hidden">
+                    STATUS: NONE
                 </div>
             </div>
 
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModals()" class="term-btn text-zinc-500 border-zinc-800">CANCEL</button>
+                <button id="btn-join-club" class="term-btn active">REQUEST_ACCESS</button>
+            </div>
         </div>
+    </div>
 
-    </main>
+    <!-- 2. MODAL CREATE CLUB -->
+    <div id="modal-create-club" class="modal-overlay hidden">
+        <div class="term-card w-full max-w-md p-6">
+            <h2 class="text-xl text-white mb-4 border-b border-zinc-800 pb-2">> ESTABLISH_NEW_CREW</h2>
+            <div class="space-y-3 mb-6">
+                <div>
+                    <label class="text-xs text-zinc-500">CREW_NAME</label>
+                    <input type="text" id="input-crew-name" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-500">MISSION / DESCRIPTION</label>
+                    <textarea id="input-crew-desc" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModals()" class="term-btn text-zinc-500 border-zinc-800">ABORT</button>
+                <button onclick="createClub()" class="term-btn active">ESTABLISH</button>
+            </div>
+        </div>
+    </div>
 
-    <footer class="text-center text-[10px] text-zinc-700 mt-8 mb-4">
-        SECURE CONNECTION ESTABLISHED. <br> STREETRACER.NET &copy; 2025
-    </footer>
 
-    <!-- LOGIC -->
+    <!-- SCRIPT -->
     <script>
         lucide.createIcons();
 
-        // ============================================
-        // CONFIG (WAJIB ISI!)
-        // ============================================
+        // CONFIG (ISI DATA KAMU)
         const SUPABASE_URL = 'MASUKKAN_URL_SUPABASE_DISINI';
         const SUPABASE_KEY = 'MASUKKAN_ANON_KEY_SUPABASE_DISINI';
+        const DISCORD_WEBHOOK = 'MASUKKAN_URL_WEBHOOK_DISCORD_DISINI';
+
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let currentUser = null;
 
-        // Dummy Data untuk Chat Feed
-        const fakeLogs = [
-            { time: '22:01', user: 'SYSTEM', msg: 'New race event posted: Airport Drift.', color: 'text-yellow-500' },
-            { time: '22:03', user: 'Ghost_Rider', msg: 'Selling Sultan full mod, cheap.', color: 'text-zinc-400' },
-            { time: '22:05', user: 'SpeedDemon', msg: 'Cops are heavy at Glen Park.', color: 'text-red-400' },
-            { time: '22:10', user: 'SYSTEM', msg: 'User [Takumi_Fujiwara] has joined the network.', color: 'text-green-500' },
-        ];
-
-        async function initDashboard() {
-            // 1. CEK SESI LOGIN
+        // INIT
+        async function init() {
             const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = 'index.html'; return; }
+            currentUser = session.user;
+
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+            if (profile) {
+                currentUser.ic_name = profile.ic_name;
+                document.getElementById('nav-ic-name').innerText = profile.ic_name.toUpperCase();
+                document.getElementById('side-ic-name').innerText = profile.ic_name;
+            }
+
+            fetchFeed();
+            fetchClubs(); // Load Club List di Sidebar
+        }
+
+        // ===========================================
+        // FITUR: CLUB LIST (SIDEBAR)
+        // ===========================================
+        async function fetchClubs() {
+            const list = document.getElementById('club-list');
             
-            if (!session) {
-                // Kalau gak login, tendang ke index.html
-                window.location.href = 'index.html';
+            // Ambil semua Crew
+            const { data: crews, error } = await supabase.from('crews').select('*').order('created_at', { ascending: false });
+
+            list.innerHTML = '';
+            if(!crews || crews.length === 0) {
+                list.innerHTML = '<div class="p-4 text-center text-xs text-zinc-600">NO CLUBS FOUND.<br>CREATE ONE?</div>';
                 return;
             }
 
-            const user = session.user;
-            console.log("Logged in as:", user.email);
-
-            // 2. AMBIL DATA PROFILE DARI TABLE 'PROFILES'
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
-
-            if (error) {
-                console.error("Error fetch profile:", error);
-                alert("Failed to load profile data.");
-            } else {
-                // Update UI dengan data Database
-                document.getElementById('user-ic-name').innerText = profile.ic_name || "UNKNOWN";
-                document.getElementById('user-rep').innerText = profile.reputation || 0;
-                document.getElementById('user-car').innerText = profile.car_model || "None";
-                document.getElementById('user-ip').innerText = profile.ip_address || "HIDDEN";
-                document.getElementById('user-rank').innerText = profile.status || "ROOKIE";
-                
-                // Update UID (Ambil 8 karakter pertama ID)
-                document.getElementById('disp-uid').innerText = user.id.substring(0, 8).toUpperCase();
-
-                // Simulasi Rank Bar (Misal max rep 100)
-                let repPercent = Math.min((profile.reputation / 100) * 100, 100);
-                document.getElementById('rep-bar').style.width = repPercent + "%";
-            }
-
-            // 3. HILANGKAN LOADING SCREEN
-            setTimeout(() => {
-                document.getElementById('loading-screen').classList.add('hidden');
-            }, 1000);
-
-            // 4. JALANKAN FAKE CHAT
-            initFakeChat();
+            crews.forEach(crew => {
+                const item = document.createElement('div');
+                item.className = "p-3 border-b border-zinc-900 hover:bg-zinc-900 cursor-pointer transition flex justify-between items-center group";
+                item.innerHTML = `
+                    <div>
+                        <div class="text-white font-bold group-hover:text-red-500 text-sm">[ ${crew.name} ]</div>
+                        <div class="text-[10px] text-zinc-600 truncate w-32">${crew.description || 'No data'}</div>
+                    </div>
+                    <span class="text-zinc-700 text-xs group-hover:text-white">></span>
+                `;
+                item.onclick = () => openClubDetail(crew.id, crew.name, crew.description, crew.created_by);
+                list.appendChild(item);
+            });
         }
 
-        // Fungsi Logout
+        // ===========================================
+        // FITUR: CLUB MODAL & JOIN
+        // ===========================================
+        let selectedCrewId = null;
+
+        async function openClubDetail(id, name, desc, creatorId) {
+            selectedCrewId = id;
+            document.getElementById('modal-club-info').classList.remove('hidden');
+            
+            // Isi Data Basic
+            document.getElementById('modal-club-name').innerText = name;
+            document.getElementById('modal-club-desc').innerText = desc || "No description provided.";
+            
+            // Loading State
+            document.getElementById('modal-club-leader').innerText = "FETCHING...";
+            document.getElementById('modal-club-count').innerText = "...";
+            const btn = document.getElementById('btn-join-club');
+            btn.innerText = "CHECKING STATUS...";
+            btn.disabled = true;
+
+            // 1. Ambil Nama Leader
+            const { data: leaderProfile } = await supabase.from('profiles').select('ic_name').eq('id', creatorId).single();
+            document.getElementById('modal-club-leader').innerText = leaderProfile ? leaderProfile.ic_name : "UNKNOWN";
+
+            // 2. Hitung Member
+            const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
+            document.getElementById('modal-club-count').innerText = count || 0;
+
+            // 3. Cek Status Kita
+            const { data: myStatus } = await supabase.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
+
+            if (!myStatus) {
+                // Belum Join
+                btn.innerText = "REQUEST_ACCESS";
+                btn.disabled = false;
+                btn.onclick = () => joinCrew(id);
+                document.getElementById('modal-club-status').classList.add('hidden');
+            } else {
+                // Sudah Join / Pending
+                btn.disabled = true;
+                if(myStatus.status === 'pending') {
+                    btn.innerText = "PENDING APPROVAL";
+                    document.getElementById('modal-club-status').innerText = "STATUS: PENDING";
+                } else {
+                    btn.innerText = "ALREADY JOINED";
+                    document.getElementById('modal-club-status').innerText = `STATUS: ${myStatus.status.toUpperCase()}`;
+                }
+                document.getElementById('modal-club-status').classList.remove('hidden');
+            }
+        }
+
+        async function joinCrew(crewId) {
+            const btn = document.getElementById('btn-join-club');
+            btn.innerText = "SENDING SIGNAL...";
+            btn.disabled = true;
+
+            const { error } = await supabase.from('crew_members').insert({
+                crew_id: crewId,
+                user_id: currentUser.id,
+                ic_name: currentUser.ic_name,
+                status: 'pending'
+            });
+
+            if(error) {
+                alert("ERROR: " + error.message);
+                btn.innerText = "TRY AGAIN";
+                btn.disabled = false;
+            } else {
+                alert("REQUEST SENT. WAITING FOR LEADER.");
+                btn.innerText = "PENDING APPROVAL";
+            }
+        }
+
+        // ===========================================
+        // FITUR: CREATE CLUB
+        // ===========================================
+        function openCreateClubModal() {
+            document.getElementById('modal-create-club').classList.remove('hidden');
+        }
+
+        async function createClub() {
+            const name = document.getElementById('input-crew-name').value.trim();
+            const desc = document.getElementById('input-crew-desc').value.trim();
+            
+            if(!name) return alert("NAME REQUIRED");
+
+            // 1. Create Club
+            const { data: crew, error } = await supabase.from('crews').insert({
+                name: name,
+                description: desc,
+                created_by: currentUser.id
+            }).select().single();
+
+            if(error) return alert("FAILED: " + error.message);
+
+            // 2. Add Self as Leader
+            await supabase.from('crew_members').insert({
+                crew_id: crew.id,
+                user_id: currentUser.id,
+                ic_name: currentUser.ic_name,
+                status: 'leader'
+            });
+
+            alert("CREW ESTABLISHED.");
+            closeModals();
+            fetchClubs(); // Refresh list
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
+        }
+
+        // ===========================================
+        // FEED SYSTEM (Sama seperti sebelumnya)
+        // ===========================================
+        async function fetchFeed() {
+            const container = document.getElementById('feed-container');
+            const { data: posts, error } = await supabase.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
+            
+            if (error) return;
+            container.innerHTML = '';
+
+            for (const post of posts) {
+                const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
+                const { count } = await supabase.from('post_likes').select('*', { count: 'exact', head: true }).eq('post_id', post.id);
+                const imgHtml = post.image_url ? `<img src="${post.image_url}" class="mt-2 w-full border border-zinc-800 opacity-90">` : '';
+
+                const html = `
+                <div class="term-card p-3">
+                    <div class="flex justify-between items-start mb-2 border-b border-zinc-900 pb-2">
+                        <div><span class="text-white font-bold text-lg">${post.ic_name}</span></div>
+                        <div class="text-zinc-700 text-xs">ID:${post.id.substring(0,4)}</div>
+                    </div>
+                    <div class="text-zinc-300 font-sans font-normal" style="font-family: 'VT323'">${post.content}</div>
+                    ${imgHtml}
+                    <div class="mt-3 flex gap-2 border-t border-zinc-900 pt-2">
+                        <button onclick="toggleLike('${post.id}')" id="btn-like-${post.id}" class="term-btn flex-1 text-center ${isLiked ? 'active' : ''}">LIKE (${count})</button>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            }
+        }
+
+        async function toggleLike(postId) {
+            const btn = document.getElementById(`btn-like-${postId}`);
+            const isLiked = btn.classList.contains('active');
+            let count = parseInt(btn.innerText.match(/\d+/)[0]);
+            
+            if (isLiked) {
+                btn.classList.remove('active'); btn.innerText = `LIKE (${count - 1})`;
+                await supabase.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
+            } else {
+                btn.classList.add('active'); btn.innerText = `LIKE (${count + 1})`;
+                await supabase.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
+            }
+        }
+
+        document.getElementById('btn-post').addEventListener('click', async () => {
+            const content = document.getElementById('post-content').value;
+            const imgUrl = document.getElementById('post-img-url').value;
+            if(!content && !imgUrl) return alert("EMPTY_DATA");
+            
+            await supabase.from('posts').insert({ user_id: currentUser.id, ic_name: currentUser.ic_name, content: content, image_url: imgUrl || null });
+            
+            // Discord Webhook
+            if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
+                fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+                    username: "DeepWeb", embeds: [{ title: currentUser.ic_name, description: content, color: 15158332, image: { url: imgUrl || null } }]
+                })}).catch(()=>{});
+            }
+
+            document.getElementById('post-content').value = '';
+            document.getElementById('post-img-url').value = '';
+            fetchFeed();
+        });
+
         document.getElementById('btn-logout').addEventListener('click', async () => {
             await supabase.auth.signOut();
             window.location.href = 'index.html';
         });
 
-        // Fungsi Fake Chat Feed (Biar keliatan hidup)
-        function initFakeChat() {
-            const feed = document.getElementById('chat-feed');
-            
-            // Load awal
-            fakeLogs.forEach(log => addLog(log));
-
-            // Tambah log acak tiap beberapa detik
-            setInterval(() => {
-                const randomMsg = [
-                    "Need mechanic at Idlewood.",
-                    "Who wants to race for pink slips?",
-                    "LSPD Helicopter spotted overhead.",
-                    "Selling drug locations $500.",
-                    "Server restarting in 10 mins."
-                ];
-                const r = randomMsg[Math.floor(Math.random() * randomMsg.length)];
-                addLog({ time: new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit'}), user: 'ANON_USER', msg: r, color: 'text-zinc-500' });
-            }, 8000);
-        }
-
-        function addLog(log) {
-            const feed = document.getElementById('chat-feed');
-            const item = document.createElement('div');
-            item.className = "hover:bg-zinc-900 px-2 py-1 cursor-default";
-            item.innerHTML = `<span class="text-zinc-600">[${log.time}]</span> <span class="font-bold ${log.color || 'text-zinc-300'}">${log.user}:</span> <span class="text-zinc-400">${log.msg}</span>`;
-            feed.appendChild(item);
-            feed.scrollTop = feed.scrollHeight; // Auto scroll ke bawah
-        }
-
-        // START
-        initDashboard();
-
+        init();
     </script>
 </body>
 </html>
