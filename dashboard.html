@@ -34,10 +34,10 @@
         .term-btn:hover { border-color: #ff0000; color: #ff0000; }
         .term-btn.active { background: #ff0000; color: #000; border-color: #ff0000; font-weight: bold; }
         
-        .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        /* Scanline efek TV, z-index diatur agar tidak menutupi tombol penting */
+        .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; z-index: 30; }
         
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal-alert { border: 1px solid #f87171; background: #3b0707; color: #f87171; padding: 8px 12px; font-size: 0.8rem; margin-bottom: 1rem; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -45,19 +45,20 @@
     <div class="fixed inset-0 pointer-events-none opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0"></div>
     <div class="scanline"></div>
 
-    <!-- NAVBAR -->
-    <nav class="h-14 border-b border-zinc-900 bg-black sticky top-0 z-40 flex items-center justify-between px-4">
+    <!-- NAVBAR (Z-Index tinggi biar bisa diklik) -->
+    <nav class="h-14 border-b border-zinc-900 bg-black sticky top-0 z-50 flex items-center justify-between px-4">
         <h1 class="text-2xl font-bold tracking-widest text-white cursor-default">STREETRACER<span class="text-neon-red">.NET</span></h1>
         <div class="flex items-center gap-4">
             <div class="text-right leading-none hidden sm:block">
                 <div id="nav-ic-name" class="text-lg text-white">UNKNOWN</div>
             </div>
-            <button id="btn-logout" class="term-btn text-xs">[ LOGOUT ]</button>
+            <!-- Tombol Logout -->
+            <button onclick="forceLogout()" class="term-btn text-xs hover:bg-red-900 hover:text-white transition-colors">[ LOGOUT ]</button>
         </div>
     </nav>
 
-    <!-- LAYOUT -->
-    <div class="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 relative z-10">
+    <!-- LAYOUT GRID -->
+    <div class="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 relative z-40">
         
         <!-- SIDEBAR KIRI: CLUB LIST -->
         <aside class="hidden lg:block lg:col-span-1 space-y-4 h-[calc(100vh-100px)] overflow-y-auto pr-2">
@@ -87,7 +88,7 @@
                     <input type="text" id="post-img-url" class="w-full bg-black border border-zinc-800 text-white p-1 text-sm" placeholder="Image URL (https://...)">
                 </div>
                 <div class="flex justify-between items-center mt-2">
-                    <button onclick="toggleImgInput()" class="text-zinc-500 hover:text-white text-sm">[ + IMG ]</button>
+                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden')" class="text-zinc-500 hover:text-white text-sm">[ + IMG ]</button>
                     <button id="btn-post" class="term-btn text-white border-red-900 bg-red-900/10 hover:bg-red-900">> SEND</button>
                 </div>
             </div>
@@ -114,7 +115,7 @@
     </div>
 
     <!-- MODALS -->
-    <!-- 1. MODAL DETAIL CLUB & JOIN -->
+    <!-- 1. MODAL DETAIL CLUB -->
     <div id="modal-club-info" class="modal-overlay hidden">
         <div class="term-card w-full max-w-md p-6 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
             <div class="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
@@ -155,24 +156,30 @@
     <script>
         lucide.createIcons();
 
-        // CONFIG (ISI DATA KAMU!)
-        const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co'; // Ganti dengan URL Supabase Anda
-        const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; // Ganti dengan Anon Key Anda
-        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1450862700736413887/pScPkMGmyFiHTQpZMBB9_tGS14pgjtxQ6cyhHqq7j0aOOgwpvJVQLoIQeu8hDm4ZUNZZ'; // Opsional
+        // ============================================
+        // 1. CONFIG (PASTIKAN INI BENAR!)
+        // ============================================
+        const SUPABASE_URL = 'MASUKKAN_URL_SUPABASE_DISINI';
+        const SUPABASE_KEY = 'MASUKKAN_ANON_KEY_SUPABASE_DISINI';
+        const DISCORD_WEBHOOK = 'MASUKKAN_URL_WEBHOOK_DISCORD_DISINI';
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
 
         // ===========================================
-        // 1. INITIALIZATION
+        // 2. LOGIC INIT & LOGOUT (DIPERBAIKI)
         // ===========================================
+        
         async function init() {
-            // Cek Session
+            // Cek Login
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { window.location.href = 'index.html'; return; }
+            if (!session) { 
+                window.location.href = 'index.html'; 
+                return; 
+            }
             currentUser = session.user;
 
-            // Load Profil IC Name
+            // Load Profil
             const { data: profile } = await supabase.from('profiles').select('ic_name').eq('id', currentUser.id).single();
             if (profile) {
                 currentUser.ic_name = profile.ic_name;
@@ -184,20 +191,27 @@
             fetchClubs();
         }
 
+        // FUNGSI LOGOUT YANG LEBIH KUAT
+        window.forceLogout = async function() {
+            try {
+                // Coba logout normal
+                await supabase.auth.signOut();
+            } catch (error) {
+                console.log("Logout error (ignored):", error);
+            } finally {
+                // Apapun yang terjadi, pindah ke halaman login
+                window.location.href = 'index.html';
+            }
+        }
+
         // ===========================================
-        // 2. CLUB MANAGEMENT
+        // 3. CLUB MANAGEMENT
         // ===========================================
         async function fetchClubs() {
             const list = document.getElementById('club-list');
             const { data: crews, error } = await supabase.from('crews').select('*').order('created_at', { ascending: false });
 
             list.innerHTML = '';
-            if (error) {
-                console.error("Error fetching crews:", error);
-                list.innerHTML = '<div class="p-4 text-center text-xs text-red-500">ERROR_LOADING_CREWS</div>';
-                return;
-            }
-
             if (!crews || crews.length === 0) {
                 list.innerHTML = '<div class="p-4 text-center text-xs text-zinc-600">NO CLUBS FOUND.<br>CREATE ONE?</div>';
                 return;
@@ -225,16 +239,19 @@
             
             const btnJoin = document.getElementById('btn-join-club');
             btnJoin.innerText = "PROCESSING..."; btnJoin.disabled = true;
-            
-            const leaderName = await getLeaderName(creatorId);
-            document.getElementById('modal-club-leader').innerText = leaderName;
 
-            const memberCount = await getMemberCount(id);
-            document.getElementById('modal-club-count').innerText = memberCount;
+            // Load Leader Name
+            const { data: leader } = await supabase.from('profiles').select('ic_name').eq('id', creatorId).single();
+            document.getElementById('modal-club-leader').innerText = leader ? leader.ic_name : "UNKNOWN";
 
-            const myStatus = await getUserClubStatus(id, currentUser.id);
+            // Load Count
+            const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id).neq('status', 'pending');
+            document.getElementById('modal-club-count').innerText = count || 0;
+
+            // Check My Status
+            const { data: myStatus } = await supabase.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
+
             const statusEl = document.getElementById('modal-club-status');
-
             if (!myStatus) {
                 btnJoin.innerText = "REQUEST_ACCESS"; btnJoin.disabled = false;
                 btnJoin.onclick = () => joinCrew(id);
@@ -249,7 +266,7 @@
 
         async function joinCrew(crewId) {
             const btn = document.getElementById('btn-join-club');
-            btn.innerText = "SENDING SIGNAL..."; btn.disabled = true;
+            btn.innerText = "SENDING..."; btn.disabled = true;
             
             const { error } = await supabase.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
             
@@ -262,9 +279,11 @@
             const desc = document.getElementById('input-crew-desc').value.trim();
             if (!name) return alert("NAME REQUIRED");
 
+            // 1. Create Club
             const { data: crew, error } = await supabase.from('crews').insert({ name, description: desc, created_by: currentUser.id }).select().single();
             if(error) return alert("FAILED: " + error.message);
 
+            // 2. Add as Leader
             await supabase.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
 
             alert("CREW ESTABLISHED.");
@@ -272,24 +291,11 @@
             fetchClubs();
         }
 
-        async function getLeaderName(userId) {
-            const { data } = await supabase.from('profiles').select('ic_name').eq('id', userId).single();
-            return data ? data.ic_name : "UNKNOWN";
-        }
-        async function getMemberCount(crewId) {
-            const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', crewId).neq('status', 'pending');
-            return count || 0;
-        }
-        async function getUserClubStatus(crewId, userId) {
-            const { data } = await supabase.from('crew_members').select('status').eq('crew_id', crewId).eq('user_id', userId).single();
-            return data;
-        }
-
         function closeModals() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); }
         function openCreateClubModal() { document.getElementById('modal-create-club').classList.remove('hidden'); }
 
         // ===========================================
-        // 3. FEED SYSTEM (POSTING, LIKE)
+        // 4. FEED SYSTEM
         // ===========================================
         async function fetchFeed() {
             const container = document.getElementById('feed-container');
@@ -333,6 +339,7 @@
             }
         }
 
+        // POST LISTENER
         document.getElementById('btn-post').addEventListener('click', async () => {
             const content = document.getElementById('post-content').value;
             const imgUrl = document.getElementById('post-img-url').value;
@@ -346,6 +353,12 @@
                 user_id: currentUser.id, ic_name: currentUser.ic_name, content: content, image_url: imgUrl || null
             }).select().single();
 
+            if (error) {
+                alert("ERROR: " + error.message);
+                btn.disabled = false; btn.innerText = "> SEND";
+                return;
+            }
+
             // Discord Notif
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
                 const payload = {
@@ -355,16 +368,10 @@
                         description: content,
                         color: 15158332,
                         image: { url: imgUrl || null },
-                        footer: { text: `ID: ${postData.id.substring(0,4)}` }
+                        footer: { text: "Encrypted Network" }
                     }]
                 };
                 try { fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch(e) {}
-            }
-            
-            if (error) {
-                alert("POST FAILED: " + error.message);
-                btn.disabled = false; btn.innerText = "> SEND";
-                return;
             }
 
             document.getElementById('post-content').value = '';
@@ -375,12 +382,9 @@
             fetchFeed();
         });
 
-        document.getElementById('btn-logout').addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            window.location.href = 'index.html';
-        });
-
+        // START
         init();
+
     </script>
 </body>
 </html>
