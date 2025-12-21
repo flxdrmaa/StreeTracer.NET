@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TOR::STREETRACER.NET</title>
+    <title>StreetRacer.NET</title>
     
     <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,9 +34,7 @@
         .term-btn:hover { border-color: #ff0000; color: #ff0000; }
         .term-btn.active { background: #ff0000; color: #000; border-color: #ff0000; font-weight: bold; }
         
-        /* Scanline efek TV, z-index diatur agar tidak menutupi tombol penting */
         .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; z-index: 30; }
-        
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
     </style>
 </head>
@@ -45,27 +43,33 @@
     <div class="fixed inset-0 pointer-events-none opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0"></div>
     <div class="scanline"></div>
 
-    <!-- NAVBAR (Z-Index tinggi biar bisa diklik) -->
-    <nav class="h-14 border-b border-zinc-900 bg-black sticky top-0 z-50 flex items-center justify-between px-4">
+    <!-- NAVBAR -->
+    <nav class="h-14 border-b border-zinc-900 bg-black sticky top-0 z-50 flex items-center justify-between px-4 shadow-lg shadow-red-900/10">
         <h1 class="text-2xl font-bold tracking-widest text-white cursor-default">STREETRACER<span class="text-neon-red">.NET</span></h1>
+        
         <div class="flex items-center gap-4">
+            <!-- NAMA USER DI SINI -->
             <div class="text-right leading-none hidden sm:block">
-                <div id="nav-ic-name" class="text-lg text-white">UNKNOWN</div>
+                <div id="nav-ic-name" class="text-lg text-white font-bold">LOADING...</div>
+                <div class="text-[10px] text-zinc-500">OPERATIVE</div>
             </div>
-            <!-- Tombol Logout -->
-            <button onclick="forceLogout()" class="term-btn text-xs hover:bg-red-900 hover:text-white transition-colors">[ LOGOUT ]</button>
+            
+            <!-- TOMBOL LOGOUT FIX -->
+            <button onclick="handleLogout()" class="term-btn text-xs hover:bg-red-900 hover:text-white transition-colors border-red-900 text-red-500">
+                [ LOGOUT ]
+            </button>
         </div>
     </nav>
 
     <!-- LAYOUT GRID -->
     <div class="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 relative z-40">
         
-        <!-- SIDEBAR KIRI: CLUB LIST -->
+        <!-- SIDEBAR KIRI -->
         <aside class="hidden lg:block lg:col-span-1 space-y-4 h-[calc(100vh-100px)] overflow-y-auto pr-2">
             <div class="term-card p-4 text-center">
                 <i data-lucide="user" class="w-10 h-10 mx-auto text-zinc-600 mb-2"></i>
-                <h2 id="side-ic-name" class="text-xl text-white leading-none">LOADING...</h2>
-                <div class="text-zinc-500 text-sm mt-2 pt-2 border-t border-zinc-900">OPERATIVE_STATUS: ACTIVE</div>
+                <h2 id="side-ic-name" class="text-xl text-white leading-none">...</h2>
+                <div class="text-zinc-500 text-sm mt-2 pt-2 border-t border-zinc-900">STATUS: ONLINE</div>
             </div>
             <div class="term-card">
                 <div class="term-header flex justify-between items-center">
@@ -73,14 +77,13 @@
                     <button onclick="openCreateClubModal()" class="text-xs text-neon-red hover:underline hover:text-white">[ + NEW ]</button>
                 </div>
                 <div id="club-list" class="flex flex-col">
-                    <div class="p-4 text-center text-zinc-600 text-sm">SCANNING_NETWORK...</div>
+                    <div class="p-4 text-center text-zinc-600 text-sm">SCANNING...</div>
                 </div>
             </div>
         </aside>
 
         <!-- TENGAH: FEED -->
         <main class="lg:col-span-2 space-y-4 pb-20">
-            <!-- INPUT POST -->
             <div class="term-card p-4">
                 <div class="flex gap-2 mb-2 text-zinc-500 text-sm"><span>> BROADCAST_MESSAGE</span><span class="animate-pulse-fast">_</span></div>
                 <textarea id="post-content" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500" rows="2" placeholder="Write encrypted message..."></textarea>
@@ -92,34 +95,28 @@
                     <button id="btn-post" class="term-btn text-white border-red-900 bg-red-900/10 hover:bg-red-900">> SEND</button>
                 </div>
             </div>
-
-            <!-- FEED CONTAINER -->
             <div id="feed-container" class="space-y-4">
-                <div class="text-center py-8 text-zinc-600">> DECRYPTING_NETWORK_DATA...</div>
+                <div class="text-center py-8 text-zinc-600">> DECRYPTING_DATA...</div>
             </div>
         </main>
 
-        <!-- KANAN: WIDGET (ADS) -->
+        <!-- KANAN: WIDGET -->
         <aside class="hidden lg:block lg:col-span-1">
             <div class="term-card p-3">
                 <div class="text-red-500 mb-2 blink-text">>> POLICE_SCANNER</div>
                 <div class="text-zinc-400 text-sm border-b border-zinc-800 pb-2 mb-2">
                     <span class="text-white">10-90 REPORTED</span><br>Suspicious activity near Grove Street.
                 </div>
-                <div class="text-zinc-400 text-sm">
-                    <span class="text-white">NEW_ROUTES</span><br>Unmapped alleys in East Los Santos.
-                </div>
             </div>
         </aside>
-
     </div>
 
     <!-- MODALS -->
-    <!-- 1. MODAL DETAIL CLUB -->
+    <!-- 1. DETAIL CLUB -->
     <div id="modal-club-info" class="modal-overlay hidden">
         <div class="term-card w-full max-w-md p-6 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
             <div class="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
-                <h2 id="modal-club-name" class="text-2xl text-white font-bold">CLUB_NAME</h2>
+                <h2 id="modal-club-name" class="text-2xl text-white font-bold">CLUB</h2>
                 <button onclick="closeModals()" class="text-zinc-500 hover:text-red-500">[X]</button>
             </div>
             <div class="space-y-4 mb-6">
@@ -137,7 +134,7 @@
         </div>
     </div>
 
-    <!-- 2. MODAL CREATE CLUB -->
+    <!-- 2. CREATE CLUB -->
     <div id="modal-create-club" class="modal-overlay hidden">
         <div class="term-card w-full max-w-md p-6">
             <h2 class="text-xl text-white mb-4 border-b border-zinc-800 pb-2">> ESTABLISH_NEW_CREW</h2>
@@ -147,73 +144,168 @@
             </div>
             <div class="flex justify-end gap-2">
                 <button onclick="closeModals()" class="term-btn text-zinc-500 border-zinc-800">ABORT</button>
-                <button onclick="createClub()" class="term-btn active">ESTABLISH</button>
+                <button onclick="submitCreateClub()" class="term-btn active">ESTABLISH</button>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT -->
+    <!-- SCRIPT UTAMA -->
     <script>
         lucide.createIcons();
 
-        // ============================================
-        // 1. CONFIG (PASTIKAN INI BENAR!)
-        // ============================================
-        const SUPABASE_URL = 'MASUKKAN_URL_SUPABASE_DISINI';
-        const SUPABASE_KEY = 'MASUKKAN_ANON_KEY_SUPABASE_DISINI';
-        const DISCORD_WEBHOOK = 'MASUKKAN_URL_WEBHOOK_DISCORD_DISINI';
+        // 1. DATA API (Gunakan yang ini agar tidak perlu edit manual)
+        const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; 
+        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1450862700736413887/pScPkMGmyFiHTQpZMBB9_tGS14pgjtxQ6cyhHqq7j0aOOgwpvJVQLoIQeu8hDm4ZUNZZ'; 
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
 
-        // ===========================================
-        // 2. LOGIC INIT & LOGOUT (DIPERBAIKI)
-        // ===========================================
-        
+        // 2. INIT & FIX NAMA USER
         async function init() {
-            // Cek Login
             const { data: { session } } = await supabase.auth.getSession();
+            
             if (!session) { 
                 window.location.href = 'index.html'; 
                 return; 
             }
             currentUser = session.user;
 
-            // Load Profil
-            const { data: profile } = await supabase.from('profiles').select('ic_name').eq('id', currentUser.id).single();
-            if (profile) {
-                currentUser.ic_name = profile.ic_name;
-                document.getElementById('nav-ic-name').innerText = profile.ic_name.toUpperCase();
-                document.getElementById('side-ic-name').innerText = profile.ic_name;
+            // Prioritas: Ambil Nama dari Metadata User (Lebih cepat & pasti ada saat register)
+            let finalName = "UNKNOWN";
+            if (currentUser.user_metadata && currentUser.user_metadata.ic_name) {
+                finalName = currentUser.user_metadata.ic_name;
+            } 
+            // Fallback: Ambil dari table profiles kalau metadata kosong
+            else {
+                const { data: profile } = await supabase.from('profiles').select('ic_name').eq('id', currentUser.id).single();
+                if(profile) finalName = profile.ic_name;
             }
+            
+            // Simpan nama agar bisa dipakai di fungsi lain
+            currentUser.ic_name = finalName; 
+
+            // Tampilkan di Navbar & Sidebar
+            document.getElementById('nav-ic-name').innerText = finalName.toUpperCase();
+            document.getElementById('side-ic-name').innerText = finalName;
 
             fetchFeed();
             fetchClubs();
         }
 
-        // FUNGSI LOGOUT YANG LEBIH KUAT
-        window.forceLogout = async function() {
+        // 3. FIX LOGOUT (Paksa pindah halaman)
+        window.handleLogout = async function() {
+            const btn = document.querySelector('button[onclick="handleLogout()"]');
+            btn.innerText = "DISCONNECTING...";
+            
+            // Set timer: Jika supabase signOut kelamaan (lebih dari 1 detik), paksa pindah
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+
             try {
-                // Coba logout normal
                 await supabase.auth.signOut();
-            } catch (error) {
-                console.log("Logout error (ignored):", error);
-            } finally {
-                // Apapun yang terjadi, pindah ke halaman login
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.log("Logout error ignored", err);
                 window.location.href = 'index.html';
             }
         }
 
-        // ===========================================
-        // 3. CLUB MANAGEMENT
-        // ===========================================
+        // 4. FIX POSTING FEED
+        document.getElementById('btn-post').addEventListener('click', async () => {
+            const content = document.getElementById('post-content').value;
+            const imgUrl = document.getElementById('post-img-url').value;
+            const btn = document.getElementById('btn-post');
+
+            if(!content && !imgUrl) return alert("DATA EMPTY!");
+
+            btn.innerText = "SENDING...";
+            btn.disabled = true;
+
+            // Insert ke DB
+            const { error } = await supabase.from('posts').insert({
+                user_id: currentUser.id,
+                ic_name: currentUser.ic_name, // Menggunakan nama yang sudah difix di init()
+                content: content,
+                image_url: imgUrl || null
+            });
+
+            if(error) {
+                alert("ERROR UPLOAD: " + error.message);
+                btn.innerText = "> SEND";
+                btn.disabled = false;
+                return;
+            }
+
+            // Webhook Discord
+            if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
+                fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+                    username: "DeepWeb", embeds: [{ title: currentUser.ic_name, description: content, color: 15158332, image: { url: imgUrl || null } }]
+                })}).catch(()=>{});
+            }
+
+            // Reset Form
+            document.getElementById('post-content').value = '';
+            document.getElementById('post-img-url').value = '';
+            document.getElementById('img-input-area').classList.add('hidden');
+            btn.innerText = "> SEND";
+            btn.disabled = false;
+            fetchFeed();
+        });
+
+        // 5. LOAD FEED
+        async function fetchFeed() {
+            const container = document.getElementById('feed-container');
+            const { data: posts, error } = await supabase.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
+            
+            if (error) return; 
+            container.innerHTML = '';
+
+            posts.forEach(post => {
+                const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
+                // Hitung jumlah like manual dari array
+                const likeCount = post.post_likes ? post.post_likes.length : 0; 
+                
+                const imgHtml = post.image_url ? `<img src="${post.image_url}" class="mt-2 w-full border border-zinc-800 opacity-90">` : '';
+
+                const html = `
+                <div class="term-card p-3 animate-[pulse_0.2s_ease-in]">
+                    <div class="flex justify-between items-start mb-2 border-b border-zinc-900 pb-2">
+                        <div><span class="text-white font-bold text-lg">${post.ic_name}</span></div>
+                    </div>
+                    <div class="text-zinc-300 whitespace-pre-wrap font-sans font-normal" style="font-family: 'VT323'">${post.content}</div>
+                    ${imgHtml}
+                    <div class="mt-3 flex gap-2 border-t border-zinc-900 pt-2">
+                        <button onclick="toggleLike('${post.id}')" id="btn-like-${post.id}" class="term-btn flex-1 text-center ${isLiked ? 'active' : ''}">LIKE (${likeCount})</button>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        async function toggleLike(postId) {
+            const btn = document.getElementById(`btn-like-${postId}`);
+            const isLiked = btn.classList.contains('active');
+            let count = parseInt(btn.innerText.match(/\d+/)[0]);
+            
+            if (isLiked) {
+                btn.classList.remove('active'); btn.innerText = `LIKE (${count - 1})`;
+                await supabase.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
+            } else {
+                btn.classList.add('active'); btn.innerText = `LIKE (${count + 1})`;
+                await supabase.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
+            }
+        }
+
+        // 6. FIX CREATE CLUB
         async function fetchClubs() {
             const list = document.getElementById('club-list');
             const { data: crews, error } = await supabase.from('crews').select('*').order('created_at', { ascending: false });
 
             list.innerHTML = '';
-            if (!crews || crews.length === 0) {
-                list.innerHTML = '<div class="p-4 text-center text-xs text-zinc-600">NO CLUBS FOUND.<br>CREATE ONE?</div>';
+            if(!crews || crews.length === 0) {
+                list.innerHTML = '<div class="p-4 text-center text-xs text-zinc-600">NO CLUBS FOUND.</div>';
                 return;
             }
 
@@ -232,159 +324,80 @@
             });
         }
 
-        async function openClubDetail(id, name, desc, creatorId) {
-            document.getElementById('modal-club-info').classList.remove('hidden');
-            document.getElementById('modal-club-name').innerText = name;
-            document.getElementById('modal-club-desc').innerText = desc || "No description.";
-            
-            const btnJoin = document.getElementById('btn-join-club');
-            btnJoin.innerText = "PROCESSING..."; btnJoin.disabled = true;
-
-            // Load Leader Name
-            const { data: leader } = await supabase.from('profiles').select('ic_name').eq('id', creatorId).single();
-            document.getElementById('modal-club-leader').innerText = leader ? leader.ic_name : "UNKNOWN";
-
-            // Load Count
-            const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id).neq('status', 'pending');
-            document.getElementById('modal-club-count').innerText = count || 0;
-
-            // Check My Status
-            const { data: myStatus } = await supabase.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
-
-            const statusEl = document.getElementById('modal-club-status');
-            if (!myStatus) {
-                btnJoin.innerText = "REQUEST_ACCESS"; btnJoin.disabled = false;
-                btnJoin.onclick = () => joinCrew(id);
-                statusEl.classList.add('hidden');
-            } else {
-                btnJoin.disabled = true;
-                btnJoin.innerText = myStatus.status === 'pending' ? "PENDING APPROVAL" : "ALREADY JOINED";
-                statusEl.innerText = `STATUS: ${myStatus.status.toUpperCase()}`;
-                statusEl.classList.remove('hidden');
-            }
-        }
-
-        async function joinCrew(crewId) {
-            const btn = document.getElementById('btn-join-club');
-            btn.innerText = "SENDING..."; btn.disabled = true;
-            
-            const { error } = await supabase.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
-            
-            if(error) { alert("ERROR: " + error.message); btn.innerText = "TRY AGAIN"; btn.disabled = false; } 
-            else { alert("REQUEST SENT."); btn.innerText = "PENDING APPROVAL"; }
-        }
-
-        async function createClub() {
+        async function submitCreateClub() {
             const name = document.getElementById('input-crew-name').value.trim();
             const desc = document.getElementById('input-crew-desc').value.trim();
-            if (!name) return alert("NAME REQUIRED");
+            
+            if(!name) return alert("NAME REQUIRED");
 
             // 1. Create Club
-            const { data: crew, error } = await supabase.from('crews').insert({ name, description: desc, created_by: currentUser.id }).select().single();
+            const { data: crew, error } = await supabase.from('crews').insert({
+                name: name,
+                description: desc,
+                created_by: currentUser.id // Pastikan kolom created_by ada di SQL
+            }).select().single();
+
             if(error) return alert("FAILED: " + error.message);
 
-            // 2. Add as Leader
-            await supabase.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
+            // 2. Add Self as Leader
+            await supabase.from('crew_members').insert({
+                crew_id: crew.id,
+                user_id: currentUser.id,
+                ic_name: currentUser.ic_name,
+                status: 'leader'
+            });
 
             alert("CREW ESTABLISHED.");
             closeModals();
             fetchClubs();
         }
 
+        async function openClubDetail(id, name, desc, creatorId) {
+            document.getElementById('modal-club-info').classList.remove('hidden');
+            document.getElementById('modal-club-name').innerText = name;
+            document.getElementById('modal-club-desc').innerText = desc || "-";
+            
+            const btnJoin = document.getElementById('btn-join-club');
+            btnJoin.disabled = false; btnJoin.innerText = "REQUEST ACCESS";
+            btnJoin.onclick = () => joinCrew(id);
+
+            // Load Leader Name
+            // Fallback sederhana jika profile leader belum ada
+            let leaderName = "UNKNOWN";
+            const { data: leader } = await supabase.from('profiles').select('ic_name').eq('id', creatorId).single();
+            if(leader) leaderName = leader.ic_name;
+            document.getElementById('modal-club-leader').innerText = leaderName;
+
+            // Load Member Count
+            const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
+            document.getElementById('modal-club-count').innerText = count || 0;
+
+            // Check Status
+            const { data: myStatus } = await supabase.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
+            const statusEl = document.getElementById('modal-club-status');
+            
+            if(myStatus) {
+                btnJoin.disabled = true;
+                btnJoin.innerText = myStatus.status === 'pending' ? "PENDING" : "JOINED";
+                statusEl.innerText = "STATUS: " + myStatus.status.toUpperCase();
+                statusEl.classList.remove('hidden');
+            } else {
+                statusEl.classList.add('hidden');
+            }
+        }
+
+        async function joinCrew(crewId) {
+            const btn = document.getElementById('btn-join-club');
+            btn.innerText = "..."; btn.disabled = true;
+            const { error } = await supabase.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
+            if(error) { alert(error.message); btn.disabled = false; }
+            else { alert("REQUEST SENT"); btn.innerText = "PENDING"; }
+        }
+
         function closeModals() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); }
         function openCreateClubModal() { document.getElementById('modal-create-club').classList.remove('hidden'); }
 
-        // ===========================================
-        // 4. FEED SYSTEM
-        // ===========================================
-        async function fetchFeed() {
-            const container = document.getElementById('feed-container');
-            const { data: posts, error } = await supabase.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
-            
-            if (error) return console.error(error);
-            container.innerHTML = '';
-
-            for (const post of posts) {
-                const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
-                const { count } = await supabase.from('post_likes').select('*', { count: 'exact', head: true }).eq('post_id', post.id);
-                const imgHtml = post.image_url ? `<img src="${post.image_url}" class="mt-2 w-full border border-zinc-800 opacity-90">` : '';
-
-                const html = `
-                <div class="term-card p-3">
-                    <div class="flex justify-between items-start mb-2 border-b border-zinc-900 pb-2">
-                        <div><span class="text-white font-bold text-lg">${post.ic_name}</span></div>
-                        <div class="text-zinc-700 text-xs">ID:${post.id.substring(0,4)}</div>
-                    </div>
-                    <div class="text-zinc-300 whitespace-pre-wrap font-sans font-normal" style="font-family: 'VT323'">${post.content}</div>
-                    ${imgHtml}
-                    <div class="mt-3 flex gap-2 border-t border-zinc-900 pt-2">
-                        <button onclick="toggleLike('${post.id}')" id="btn-like-${post.id}" class="term-btn flex-1 text-center ${isLiked ? 'active' : ''}">LIKE (${count})</button>
-                    </div>
-                </div>`;
-                container.insertAdjacentHTML('beforeend', html);
-            }
-        }
-
-        async function toggleLike(postId) {
-            const btn = document.getElementById(`btn-like-${postId}`);
-            const isLiked = btn.classList.contains('active');
-            let count = parseInt(btn.innerText.match(/\d+/)[0]);
-            
-            if (isLiked) {
-                btn.classList.remove('active'); btn.innerText = `LIKE (${count - 1})`;
-                await supabase.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
-            } else {
-                btn.classList.add('active'); btn.innerText = `LIKE (${count + 1})`;
-                await supabase.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
-            }
-        }
-
-        // POST LISTENER
-        document.getElementById('btn-post').addEventListener('click', async () => {
-            const content = document.getElementById('post-content').value;
-            const imgUrl = document.getElementById('post-img-url').value;
-            const btn = document.getElementById('btn-post');
-
-            if(!content && !imgUrl) return alert("EMPTY_DATA");
-
-            btn.disabled = true; btn.innerText = "...";
-
-            const { data: postData, error } = await supabase.from('posts').insert({
-                user_id: currentUser.id, ic_name: currentUser.ic_name, content: content, image_url: imgUrl || null
-            }).select().single();
-
-            if (error) {
-                alert("ERROR: " + error.message);
-                btn.disabled = false; btn.innerText = "> SEND";
-                return;
-            }
-
-            // Discord Notif
-            if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
-                const payload = {
-                    username: "DeepWeb Monitor",
-                    embeds: [{
-                        title: `New Broadcast: ${currentUser.ic_name}`,
-                        description: content,
-                        color: 15158332,
-                        image: { url: imgUrl || null },
-                        footer: { text: "Encrypted Network" }
-                    }]
-                };
-                try { fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch(e) {}
-            }
-
-            document.getElementById('post-content').value = '';
-            document.getElementById('post-img-url').value = '';
-            document.getElementById('img-input-area').classList.add('hidden');
-            btn.disabled = false; btn.innerText = "> SEND";
-            
-            fetchFeed();
-        });
-
-        // START
         init();
-
     </script>
 </body>
 </html>
