@@ -82,7 +82,7 @@
     <!-- LAYOUT GRID -->
     <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-3 lg:p-4 mt-1">
         
-        <!-- SIDEBAR (User & Club Directory) -->
+        <!-- SIDEBAR -->
         <aside class="lg:col-span-1 space-y-4 order-1">
             <div class="onion-box p-3 flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -198,6 +198,7 @@
 
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
+        let activeReplyId = null; 
 
         // TOAST NOTIFICATION
         window.showToast = function(title, message, isError = false) {
@@ -257,7 +258,6 @@
 
             if(error) { window.showToast("ERROR", error.message, true); btn.innerText = "SEND"; btn.disabled = false; return; }
 
-            // Webhook
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
                 fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
                     username: "TOR_NODE",
@@ -280,24 +280,60 @@
             else { window.showToast("SYSTEM", "PACKET WIPED"); fetchFeed(); }
         }
 
+        // NEW: DELETE COMMENT FUNCTION
+        window.deleteComment = async function(commentId) {
+            if(!confirm("PRUNE THIS COMMENT NODE?")) return;
+            // Hanya bisa hapus jika user_id sesuai
+            const { error } = await sbClient.from('comments').delete().eq('id', commentId).eq('user_id', currentUser.id);
+            if(error) window.showToast("ERROR", "PRUNE FAILED", true);
+            else { window.showToast("SYSTEM", "NODE PRUNED"); fetchFeed(); }
+        }
+
+        window.initReply = function(postId, commentId, username) {
+            activeReplyId = commentId;
+            const indicator = document.getElementById(`reply-indicator-${postId}`);
+            if(indicator) {
+                indicator.innerHTML = `<span class="text-term-green animate-pulse">>> Replying to ${username || 'ANONYMOUS'}</span> <button onclick="window.cancelReply('${postId}')" class="text-red-500 hover:text-white ml-2 text-[10px]">[CANCEL]</button>`;
+                indicator.classList.remove('hidden');
+            }
+            // Force open box
+            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
+            const section = document.getElementById(`comment-section-${postId}`);
+            if(section) section.classList.remove('hidden');
+
+            const input = document.getElementById(`comment-input-${postId}`);
+            input.focus();
+        }
+
+        window.cancelReply = function(postId) {
+            activeReplyId = null;
+            const indicator = document.getElementById(`reply-indicator-${postId}`);
+            if(indicator) indicator.classList.add('hidden');
+        }
+
         window.submitComment = async function(postId) {
             const input = document.getElementById(`comment-input-${postId}`);
             const content = input.value.trim();
             if(!content) return;
-            const { error } = await sbClient.from('comments').insert({ post_id: postId, user_id: currentUser.id, ic_name: "ANONYMOUS", content: content });
-            if(error) { window.showToast("ERROR", "FAILED", true); } 
-            else { input.value = ''; fetchFeed(); window.showToast("SENT", "REPLY ADDED"); }
-        }
 
-        window.replyToUser = function(postId, username) {
-            const input = document.getElementById(`comment-input-${postId}`);
-            // Force open comment box
-            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
-            const section = document.getElementById(`comment-section-${postId}`);
-            if(section) section.classList.remove('hidden');
+            const payload = { 
+                post_id: postId, 
+                user_id: currentUser.id, 
+                ic_name: "ANONYMOUS", 
+                content: content 
+            };
+            if (activeReplyId) payload.parent_id = activeReplyId;
+
+            const { error } = await sbClient.from('comments').insert(payload);
             
-            input.value = `>> ${username}: `;
-            input.focus();
+            if(error) { 
+                window.showToast("ERROR", "FAILED", true); 
+            } else { 
+                input.value = ''; 
+                window.cancelReply(postId); 
+                fetchFeed(); 
+                window.showToast("SENT", "REPLY ADDED"); 
+            }
         }
 
         window.toggleComments = function(postId) {
@@ -319,32 +355,62 @@
                 const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
                 const isOwner = post.user_id === currentUser.id;
-                const comments = post.comments ? post.comments.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)) : [];
                 
+                // ORGANIZE COMMENTS
+                const allComments = post.comments || [];
+                const rootComments = allComments.filter(c => !c.parent_id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+                
+                // RECURSIVE RENDERER
+                const renderComment = (comment, level = 0) => {
+                    const children = allComments.filter(c => c.parent_id === comment.id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+                    const marginLeft = level > 0 ? 'ml-3 sm:ml-6 border-l border-[#333] pl-2' : '';
+                    const connector = level > 0 ? '<span class="text-[#333] mr-1">|__</span>' : '';
+                    
+                    const isCommentOwner = comment.user_id === currentUser.id;
+
+                    // TOMBOL DELETE COMMENT (Hanya jika milik sendiri)
+                    const deleteBtn = isCommentOwner ? 
+                        `<button onclick="window.deleteComment('${comment.id}')" class="text-term-red hover:text-white ml-2 text-[10px] font-bold">[DEL]</button>` : '';
+
+                    // TOMBOL REPLY TEXT (Selalu muncul untuk kemudahan Android)
+                    const replyBtn = `<button onclick="window.initReply('${post.id}', '${comment.id}', 'ANONYMOUS')" class="text-gray-500 hover:text-white ml-2 text-[10px] font-bold">[REPLY]</button>`;
+
+                    let html = `
+                    <div class="${marginLeft} mb-1.5 group">
+                        <div class="flex flex-col sm:flex-row sm:items-start text-[11px] font-mono">
+                            <div class="text-gray-400 wrap-text flex-1">
+                                ${connector}<span class="text-term-green font-bold">ANONYMOUS:</span> ${comment.content}
+                            </div>
+                            <!-- Action Buttons Inline for better UX -->
+                            <div class="flex items-center mt-1 sm:mt-0">
+                                ${replyBtn}
+                                ${deleteBtn}
+                            </div>
+                        </div>
+                    </div>`;
+
+                    children.forEach(child => { html += renderComment(child, level + 1); });
+                    return html;
+                };
+
+                // GENERATE HTML COMMENTS
+                let commentsHtml = '';
+                if(rootComments.length > 0) {
+                    commentsHtml = `<div id="comment-section-${post.id}" class="hidden mt-3 pt-2 border-t border-[#222] space-y-2">`;
+                    rootComments.forEach(root => { commentsHtml += renderComment(root); });
+                    commentsHtml += `</div>`;
+                }
+
                 // IMAGE
                 let imgHtml = '';
                 if(post.image_url) {
                     imgHtml = `<div class="post-image-container"><img src="${post.image_url}" alt="ATTACHMENT" loading="lazy"></div>`;
                 }
 
-                // DELETE BUTTON (Owner only)
+                // DELETE POST BUTTON
                 let deleteHtml = '';
                 if(isOwner) {
                     deleteHtml = `<button onclick="window.deletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-                }
-
-                // COMMENTS HTML (Hidden by default)
-                let commentsHtml = '';
-                if(comments.length > 0) {
-                    commentsHtml = `<div id="comment-section-${post.id}" class="hidden mt-3 pt-2 border-t border-[#222] space-y-2">`;
-                    comments.forEach(c => {
-                        commentsHtml += `
-                        <div class="flex justify-between items-start group">
-                            <div class="text-[11px] text-gray-400 font-mono wrap-text flex-1"><span class="text-term-green font-bold"><</span> ${c.content}</div>
-                            <button onclick="window.replyToUser('${post.id}', '${c.ic_name}')" class="text-gray-600 hover:text-white ml-2 opacity-0 group-hover:opacity-100 transition"><i data-lucide="reply" class="w-3 h-3"></i></button>
-                        </div>`;
-                    });
-                    commentsHtml += `</div>`;
                 }
 
                 const html = `
@@ -364,18 +430,16 @@
                         ${imgHtml}
                     </div>
                     
-                    <!-- Actions (Icons Only, Same Icon Style) -->
+                    <!-- Actions -->
                     <div class="px-3 py-2 border-t border-[#222] flex items-center justify-between bg-[#0a0a0a]">
                         <div class="flex gap-4">
-                            <!-- LIKE (Toggle Color Only) -->
                             <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600 hover:text-white'} transition">
                                 <i data-lucide="thumbs-up" class="w-4 h-4"></i>
                                 <span class="text-xs font-bold">${likeCount > 0 ? likeCount : ''}</span>
                             </button>
-                            <!-- COMMENT TOGGLE -->
                             <button onclick="window.toggleComments('${post.id}')" class="flex items-center gap-1 text-gray-600 hover:text-white transition">
                                 <i data-lucide="message-square" class="w-4 h-4"></i>
-                                <span class="text-xs font-bold">${comments.length > 0 ? comments.length : ''}</span>
+                                <span class="text-xs font-bold">${allComments.length > 0 ? allComments.length : ''}</span>
                             </button>
                         </div>
                     </div>
@@ -383,9 +447,12 @@
                     <!-- Hidden Comment Box -->
                     <div class="px-3 pb-3 bg-[#0a0a0a]">
                         ${commentsHtml}
-                        <div id="comment-box-${post.id}" class="hidden mt-2 flex gap-2">
-                            <input type="text" id="comment-input-${post.id}" class="flex-1 bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono" placeholder="Write reply..." onkeydown="if(event.key === 'Enter') window.submitComment('${post.id}')">
-                            <button onclick="window.submitComment('${post.id}')" class="text-[10px] bg-[#222] px-3 text-gray-400 hover:text-white hover:bg-term-green hover:text-black transition">SEND</button>
+                        <div id="comment-box-${post.id}" class="hidden mt-2">
+                            <div id="reply-indicator-${post.id}" class="text-[10px] mb-1 hidden font-mono pl-1"></div>
+                            <div class="flex gap-2">
+                                <input type="text" id="comment-input-${post.id}" class="flex-1 bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono" placeholder="Write reply..." onkeydown="if(event.key === 'Enter') window.submitComment('${post.id}')">
+                                <button onclick="window.submitComment('${post.id}')" class="text-[10px] bg-[#222] px-3 text-gray-400 hover:text-white hover:bg-term-green hover:text-black transition">SEND</button>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -400,22 +467,15 @@
             let currentText = countSpan.innerText.trim();
             let count = currentText === '' ? 0 : parseInt(currentText);
 
-            // Optimistic Update
             if (btn.classList.contains('text-term-green')) {
-                // Unlike
-                btn.classList.remove('text-term-green');
-                btn.classList.add('text-gray-600');
+                btn.classList.remove('text-term-green'); btn.classList.add('text-gray-600');
                 count--;
                 await sbClient.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
             } else {
-                // Like
-                btn.classList.add('text-term-green');
-                btn.classList.remove('text-gray-600');
+                btn.classList.add('text-term-green'); btn.classList.remove('text-gray-600');
                 count++;
                 await sbClient.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
             }
-            
-            // Render text
             countSpan.innerText = count > 0 ? count : '';
         }
 
@@ -474,7 +534,6 @@
             else { window.showToast("SENT", "PACKET DELIVERED"); btn.innerText = "PENDING..."; }
         }
 
-        // INIT LISTENERS
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-post').addEventListener('click', window.submitPost);
             document.getElementById('post-content').addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.submitPost(); } });
