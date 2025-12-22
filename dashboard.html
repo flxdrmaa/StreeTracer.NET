@@ -97,7 +97,7 @@
 
             <div class="onion-box">
                 <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
-                    <span class="text-xs text-gray-400 font-bold">/// CREW_LIST</span>
+                    <span class="text-xs text-gray-400 font-bold">/// CLUB LIST</span>
                     <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ REQUEST ]</button>
                 </div>
                 <div id="club-list" class="flex flex-col text-xs max-h-[150px] lg:max-h-[400px] overflow-y-auto">
@@ -325,9 +325,9 @@
 
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
                 fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-                    username: "TOR_NODE",
-                    avatar_url: "https://i.imgur.com/4M34hi2.png",
-                    embeds: [{ title: "INCOMING_PACKET", description: `\`\`\`${content}\`\`\``, color: 0, image: { url: imgUrl || null }, footer: { text: "ENCRYPTED_RELAY" } }]
+                    username: "Streetracer.NET",
+                    avatar_url: "https://i.pinimg.com/736x/a5/82/9a/a5829ac0d2b9d70943c41c6f48e5acea.jpg",
+                    embeds: [{ title: "Something new appeared on the network", description: `\`\`\`${content}\`\`\``, color: 0, image: { url: imgUrl || null }, footer: { text: "ENCRYPTED_RELAY" } }]
                 })}).catch(()=>{});
             }
 
