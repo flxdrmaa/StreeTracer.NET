@@ -36,38 +36,24 @@
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         
-        /* BOX STYLES */
+        /* UTILS */
         .onion-box { background: #080808; border: 1px solid #333; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
         .onion-btn { border: 1px solid #444; background: #111; color: #888; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
         .onion-btn:hover:not(:disabled) { background: #222; color: #fff; border-color: #666; }
         .onion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        /* MODAL */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .hidden { display: none !important; }
 
-        /* IMAGE STYLE (OPEN) */
-        .post-image-container {
-            width: 100%;
-            margin-top: 10px;
-            border: 1px solid #333;
-            background: #000;
-            position: relative;
-        }
-        .post-image-container img {
-            width: 100%;
-            height: auto;
-            display: block;
-            opacity: 0.9;
-            transition: opacity 0.3s;
-        }
-        .post-image-container img:hover { opacity: 1; }
+        /* IMAGE STYLE */
+        .post-image-container { width: 100%; margin-top: 10px; border: 1px solid #333; background: #000; position: relative; }
+        .post-image-container img { width: 100%; height: auto; display: block; opacity: 0.9; }
 
         /* TEXT UTILS */
         .blink-red { animation: blink 1s infinite; color: #ff3333; }
         .wrap-text { white-space: pre-wrap; word-wrap: break-word; }
 
-        /* TOAST NOTIFICATION (RESPONSIVE) */
+        /* TOAST */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
         .term-toast {
             background: #000; border-left: 4px solid #00ff41; border-top: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333;
@@ -79,46 +65,34 @@
         .term-toast.show { transform: translateX(0); }
         .term-toast.error { border-left-color: #ff3333; }
         
-        /* MOBILE TWEAKS */
         @media (max-width: 640px) {
             #toast-container { right: 5%; width: 90%; top: 10px; }
-            .term-toast { width: 100%; min-width: auto; }
-            .onion-box { margin-bottom: 10px; }
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
     <!-- HEADER -->
     <header class="bg-[#1a1a1a] border-b border-[#333] p-2 flex items-center gap-2 sticky top-0 z-50 shadow-2xl">
-        <div class="flex gap-1.5 ml-1 hidden sm:flex">
-            <div class="w-3 h-3 rounded-full bg-red-900/50 border border-red-700"></div>
-            <div class="w-3 h-3 rounded-full bg-yellow-900/50 border border-yellow-700"></div>
-            <div class="w-3 h-3 rounded-full bg-green-900/50 border border-green-700"></div>
-        </div>
-        
-        <!-- Address Bar (Truncated on mobile) -->
         <div class="flex-1 bg-black border border-[#333] mx-1 px-3 py-1.5 flex items-center gap-2 text-xs rounded opacity-90 overflow-hidden">
             <i data-lucide="lock" class="w-3 h-3 text-term-green flex-shrink-0"></i>
-            <div class="truncate w-full flex gap-1">
-                <span class="text-term-green">https://</span>
-                <span class="text-gray-500 truncate">sr-net-v3hidden.onion/board</span>
-            </div>
+            <span class="text-term-green truncate">sr-net-v3.onion</span>
         </div>
-
         <div class="mr-1 cursor-pointer hover:text-white text-gray-500 p-1" onclick="window.handleLogout()">
             <i data-lucide="power" class="w-4 h-4"></i>
         </div>
     </header>
 
     <!-- LAYOUT GRID -->
+    <!-- ORDER-1: SIDEBAR (Agar di mobile muncul paling atas) -->
+    <!-- ORDER-2: FEED (Agar di mobile muncul di bawah sidebar) -->
     <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-3 lg:p-4 mt-1">
         
-        <!-- SIDEBAR (User & Menu) -->
-        <aside class="lg:col-span-1 space-y-4 order-2 lg:order-1">
+        <!-- SIDEBAR (User & Club Directory) -->
+        <aside class="lg:col-span-1 space-y-4 order-1">
+            <!-- User Info -->
             <div class="onion-box p-3 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div class="w-2 h-2 bg-term-green rounded-full animate-pulse shadow-[0_0_5px_#00ff41]"></div>
@@ -130,50 +104,45 @@
                 <i data-lucide="shield-check" class="w-5 h-5 text-gray-700"></i>
             </div>
 
-            <!-- Mobile Collapsible for Crew List to save space -->
+            <!-- Club Directory -->
             <div class="onion-box">
                 <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
-                    <span class="text-xs text-gray-400 font-bold">/// CREW_DIRECTORY</span>
-                    <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ + NEW ]</button>
+                    <span class="text-xs text-gray-400 font-bold">/// CREW_LIST</span>
+                    <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ + ]</button>
                 </div>
-                <div id="club-list" class="flex flex-col text-xs max-h-[200px] lg:max-h-[400px] overflow-y-auto">
+                <!-- Scrollable list with fixed max height so it doesn't take too much space on mobile -->
+                <div id="club-list" class="flex flex-col text-xs max-h-[150px] lg:max-h-[400px] overflow-y-auto">
                     <div class="p-4 text-center text-gray-600">Scanning network...</div>
                 </div>
             </div>
         </aside>
 
         <!-- MAIN FEED -->
-        <main class="lg:col-span-2 space-y-4 order-1 lg:order-2 pb-20">
-            <!-- Warning Banner -->
+        <main class="lg:col-span-2 space-y-4 order-2 pb-20">
+            <!-- Warning -->
             <div class="bg-red-900/10 border border-red-900/30 p-2 text-[10px] text-red-600 text-center uppercase tracking-widest font-bold">
                 *** Connection Encrypted (AES-256) ***
             </div>
 
-            <!-- INPUT AREA -->
+            <!-- Input Box -->
             <div class="onion-box p-3 relative group focus-within:border-term-green transition-colors">
-                <div class="text-xs text-gray-500 mb-2 font-mono flex justify-between">
-                    <span>> broadcast_message</span>
-                    <span class="text-[10px] text-gray-700 hidden sm:inline">[ ANONYMOUS ]</span>
-                </div>
-                
-                <textarea id="post-content" class="w-full h-24 bg-black border border-[#333] p-3 text-sm text-gray-300 focus:border-term-green focus:text-term-green outline-none font-mono resize-none placeholder-gray-800" placeholder="Write something..."></textarea>
+                <textarea id="post-content" class="w-full h-20 bg-black border border-[#333] p-3 text-sm text-gray-300 focus:border-term-green outline-none font-mono resize-none placeholder-gray-800" placeholder="Broadcast message..."></textarea>
                 
                 <div id="img-input-area" class="hidden mt-2 border-l-2 border-term-green pl-2 bg-[#0a0a0a] p-2">
-                    <label class="text-[10px] text-term-green block mb-1">IMAGE_URL (Direct Link):</label>
-                    <input type="text" id="post-img-url" class="w-full bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono focus:border-white" placeholder="https://i.imgur.com/example.jpg">
+                    <input type="text" id="post-img-url" class="w-full bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono focus:border-white" placeholder="https://image-url.com/file.jpg">
                 </div>
 
-                <div class="flex justify-between items-center mt-3 pt-2 border-t border-[#222]">
-                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden'); document.getElementById('post-img-url').focus();" class="text-[10px] text-gray-500 hover:text-white flex items-center gap-1 uppercase p-1">
-                        <i data-lucide="image" class="w-4 h-4"></i> <span class="hidden sm:inline">ATTACH MEDIA</span>
+                <div class="flex justify-between items-center mt-2 pt-2 border-t border-[#222]">
+                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden');" class="text-gray-500 hover:text-white p-1">
+                        <i data-lucide="image" class="w-5 h-5"></i>
                     </button>
-                    <button id="btn-post" class="onion-btn px-6 py-1.5 text-xs bg-gray-900 hover:bg-term-green hover:text-black hover:border-term-green tracking-wider">
-                        SEND_PACKET
+                    <button id="btn-post" class="onion-btn px-6 py-1 text-xs bg-gray-900 hover:bg-term-green hover:text-black hover:border-term-green">
+                        SEND
                     </button>
                 </div>
             </div>
 
-            <!-- FEED CONTAINER -->
+            <!-- Feed Stream -->
             <div id="feed-container" class="space-y-4">
                 <div class="text-center py-10 text-gray-600 text-xs font-mono">
                     <div class="animate-spin w-6 h-6 border-2 border-term-green border-t-transparent rounded-full mx-auto mb-2"></div>
@@ -182,82 +151,52 @@
             </div>
         </main>
 
-        <!-- RIGHT WIDGETS (Hidden on mobile to save space, or moved to bottom) -->
+        <!-- RIGHT WIDGETS (Hidden on mobile) -->
         <aside class="hidden lg:block lg:col-span-1 space-y-4 order-3">
             <div class="onion-box p-3">
                 <div class="text-xs text-gray-500 mb-2 border-b border-[#333] pb-1 flex justify-between">
-                    <span>CRYPTO_MARKET</span><span class="text-term-green text-[10px] animate-pulse">● LIVE</span>
+                    <span>CRYPTO</span><span class="text-term-green text-[10px] animate-pulse">● LIVE</span>
                 </div>
                 <ul class="text-xs space-y-2 font-mono">
                     <li class="flex justify-between"><span class="text-gray-500">BTC</span> <span class="text-gray-300 font-bold">$98,420</span></li>
                     <li class="flex justify-between"><span class="text-gray-500">ETH</span> <span class="text-gray-300 font-bold">$2,850</span></li>
-                    <li class="flex justify-between"><span class="text-gray-500">XMR</span> <span class="text-gray-300 font-bold">$165</span></li>
                 </ul>
-            </div>
-
-            <div class="onion-box border-red-900/30">
-                <div class="bg-red-900/10 p-2 border-b border-red-900/30 flex justify-between items-center">
-                    <span class="text-xs text-red-500 font-bold blink-red">>> MOST_WANTED</span>
-                    <i data-lucide="siren" class="w-4 h-4 text-red-700"></i>
-                </div>
-                <div class="p-3 space-y-3">
-                    <div class="border-b border-[#222] pb-2">
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-white font-bold">GHOST_RIDER</span>
-                            <span class="text-[10px] bg-red-900 text-black px-1 font-bold">K.O.S</span>
-                        </div>
-                        <div class="text-[10px] text-gray-500">Vinewood Hills area.</div>
-                    </div>
-                </div>
             </div>
         </aside>
     </div>
 
-    <!-- MODALS (RESPONSIVE) -->
-    <!-- CREATE CLUB -->
+    <!-- MODALS -->
     <div id="modal-create-club" class="modal-overlay hidden">
-        <div class="onion-box w-[95%] max-w-md p-1 bg-black border border-term-green shadow-[0_0_50px_rgba(0,255,65,0.15)]">
-            <div class="bg-term-green/20 text-term-green border-b border-term-green px-3 py-2 text-sm font-bold flex justify-between items-center">
-                <span>> EXECUTE: CREATE_CREW</span>
-                <button onclick="window.closeModals()" class="hover:text-white p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
-            </div>
-            <div class="p-5 space-y-4">
-                <div>
-                    <label class="block text-[10px] text-gray-500 mb-1">CREW_NAME</label>
-                    <input type="text" id="input-crew-name" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green focus:bg-black transition">
-                </div>
-                <div>
-                    <label class="block text-[10px] text-gray-500 mb-1">MISSION_STATEMENT</label>
-                    <textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green focus:bg-black transition" rows="3"></textarea>
-                </div>
-                <div class="flex justify-end gap-2 pt-2 border-t border-[#222]">
-                    <button onclick="window.closeModals()" class="text-xs text-gray-500 hover:text-white px-3 py-2">[ ABORT ]</button>
-                    <button onclick="window.submitCreateClub()" class="onion-btn text-xs px-4 py-2 text-term-green border-term-green hover:bg-term-green hover:text-black">INITIALIZE</button>
+        <div class="onion-box w-[95%] max-w-md p-4 bg-black border border-term-green">
+            <h2 class="text-term-green font-bold mb-4 border-b border-term-green pb-2">> CREATE_CREW</h2>
+            <div class="space-y-4">
+                <input type="text" id="input-crew-name" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green" placeholder="CREW NAME">
+                <textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green" rows="3" placeholder="DESCRIPTION"></textarea>
+                <div class="flex justify-end gap-2">
+                    <button onclick="window.closeModals()" class="text-gray-500 text-xs px-3">[ CANCEL ]</button>
+                    <button onclick="window.submitCreateClub()" class="onion-btn text-xs px-4 py-2 text-term-green border-term-green">CREATE</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- CLUB INFO -->
     <div id="modal-club-info" class="modal-overlay hidden">
         <div class="onion-box w-[95%] max-w-lg p-0">
             <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
-                <div class="text-base text-white font-bold font-mono truncate mr-2" id="modal-club-name">CLUB_NAME</div>
-                <button onclick="window.closeModals()" class="text-red-500 text-xs hover:text-red-400 border border-red-900/30 px-2 py-1">[ CLOSE ]</button>
+                <div class="text-base text-white font-bold font-mono truncate" id="modal-club-name">CLUB</div>
+                <button onclick="window.closeModals()" class="text-red-500 text-xs border border-red-900/30 px-2 py-1">[X]</button>
             </div>
             <div class="p-5">
                 <div class="flex gap-4 mb-4">
-                    <div class="w-16 h-16 border border-[#333] bg-[#050505] flex items-center justify-center flex-shrink-0"><i data-lucide="users" class="text-gray-700 w-8 h-8"></i></div>
-                    <div class="flex-1 space-y-1 min-w-0">
-                        <div class="flex justify-between"><span class="text-xs text-gray-500">LEADER</span><span id="modal-club-leader" class="text-sm text-term-green truncate ml-2">...</span></div>
+                    <div class="w-16 h-16 border border-[#333] bg-[#050505] flex items-center justify-center"><i data-lucide="users" class="text-gray-700 w-8 h-8"></i></div>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex justify-between"><span class="text-xs text-gray-500">LEADER</span><span id="modal-club-leader" class="text-sm text-term-green">...</span></div>
                         <div class="flex justify-between border-t border-[#222] pt-1 mt-1"><span class="text-xs text-gray-500">MEMBERS</span><span id="modal-club-count" class="text-sm text-white">0</span></div>
                     </div>
                 </div>
-                <div class="bg-[#0a0a0a] p-3 border border-[#333] text-xs text-gray-400 mb-4 font-mono leading-relaxed wrap-text max-h-40 overflow-y-auto" id="modal-club-desc">...</div>
+                <div class="bg-[#0a0a0a] p-3 border border-[#333] text-xs text-gray-400 mb-4 wrap-text" id="modal-club-desc">...</div>
                 <div id="modal-club-status" class="hidden mb-4 text-center py-2 border border-yellow-900/50 bg-yellow-900/10 text-yellow-500 text-xs">STATUS: PENDING</div>
-                <div class="flex justify-end">
-                    <button id="btn-join-club" class="onion-btn px-4 py-2 text-xs border-term-green text-term-green hover:bg-term-green hover:text-black w-full sm:w-auto">SEND_JOIN_REQUEST</button>
-                </div>
+                <button id="btn-join-club" class="onion-btn px-4 py-2 text-xs border-term-green text-term-green w-full">JOIN CREW</button>
             </div>
         </div>
     </div>
@@ -304,16 +243,15 @@
             fetchClubs();
         }
 
-        // 3. ACTIONS
+        // 3. GLOBAL FUNCTIONS
         window.handleLogout = async function() {
             window.showToast("SYSTEM", "DISCONNECTING...", true);
             setTimeout(async () => { await sbClient.auth.signOut(); window.location.href = 'index.html'; }, 1000);
         }
-
         window.openCreateClubModal = function() { document.getElementById('modal-create-club').classList.remove('hidden'); }
         window.closeModals = function() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); }
 
-        // 4. POSTING
+        // 4. POST & COMMENT LOGIC
         window.submitPost = async function() {
             const contentInput = document.getElementById('post-content');
             const imgInput = document.getElementById('post-img-url');
@@ -322,8 +260,7 @@
             const imgUrl = imgInput.value;
 
             if(!content.trim() && !imgUrl.trim()) return;
-
-            btn.innerText = "SENDING..."; btn.disabled = true;
+            btn.innerText = "..."; btn.disabled = true;
 
             const { error } = await sbClient.from('posts').insert({
                 user_id: currentUser.id, 
@@ -332,30 +269,29 @@
                 image_url: imgUrl || null
             });
 
-            if(error) { 
-                window.showToast("ERROR", error.message, true);
-                btn.innerText = "SEND_PACKET"; btn.disabled = false; return; 
-            }
+            if(error) { window.showToast("ERROR", error.message, true); btn.innerText = "SEND"; btn.disabled = false; return; }
 
+            // Webhook
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
                 fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
                     username: "TOR_NODE",
                     avatar_url: "https://i.imgur.com/4M34hi2.png",
-                    embeds: [{ 
-                        title: "INCOMING_PACKET", 
-                        description: `\`\`\`${content}\`\`\``, 
-                        color: 0, 
-                        image: { url: imgUrl || null },
-                        footer: { text: "ENCRYPTED_RELAY" }
-                    }]
+                    embeds: [{ title: "INCOMING_PACKET", description: `\`\`\`${content}\`\`\``, color: 0, image: { url: imgUrl || null }, footer: { text: "ENCRYPTED_RELAY" } }]
                 })}).catch(()=>{});
             }
 
             contentInput.value = ''; imgInput.value = '';
             document.getElementById('img-input-area').classList.add('hidden');
-            btn.innerText = "SEND_PACKET"; btn.disabled = false;
-            window.showToast("SUCCESS", "DATA UPLOADED");
+            btn.innerText = "SEND"; btn.disabled = false;
+            window.showToast("SUCCESS", "UPLOADED");
             fetchFeed();
+        }
+
+        window.deletePost = async function(postId) {
+            if(!confirm("DELETE THIS PACKET PERMANENTLY?")) return;
+            const { error } = await sbClient.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
+            if(error) window.showToast("ERROR", "DELETE FAILED", true);
+            else { window.showToast("SYSTEM", "PACKET WIPED"); fetchFeed(); }
         }
 
         window.submitComment = async function(postId) {
@@ -363,18 +299,24 @@
             const content = input.value.trim();
             if(!content) return;
             const { error } = await sbClient.from('comments').insert({ post_id: postId, user_id: currentUser.id, ic_name: "ANONYMOUS", content: content });
-            if(error) { window.showToast("ERROR", "COMMENT FAILED", true); } 
+            if(error) { window.showToast("ERROR", "FAILED", true); } 
             else { input.value = ''; fetchFeed(); window.showToast("SENT", "REPLY ADDED"); }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn-post').addEventListener('click', window.submitPost);
-            document.getElementById('post-content').addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.submitPost(); } });
-            document.getElementById('post-img-url').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.submitPost(); } });
-            init();
-        });
+        window.replyToUser = function(postId, username) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            input.value = `>> ${username}: `;
+            input.focus();
+        }
 
-        // 5. FEED (UPDATED: IMAGE DIRECT SHOW)
+        window.toggleComments = function(postId) {
+            const box = document.getElementById(`comment-box-${postId}`);
+            const section = document.getElementById(`comment-section-${postId}`);
+            box.classList.toggle('hidden');
+            if(section) section.classList.toggle('hidden');
+        }
+
+        // 5. FEED RENDERER
         async function fetchFeed() {
             const container = document.getElementById('feed-container');
             const { data: posts, error } = await sbClient.from('posts').select('*, post_likes(user_id), comments(*)').order('created_at', { ascending: false }).limit(20);
@@ -385,46 +327,69 @@
             posts.forEach(post => {
                 const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
+                const isOwner = post.user_id === currentUser.id;
                 const comments = post.comments ? post.comments.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)) : [];
                 
-                // IMAGE LOGIC: DIRECT SHOW
+                // IMAGE
                 let imgHtml = '';
                 if(post.image_url) {
-                    imgHtml = `
-                    <div class="post-image-container">
-                        <img src="${post.image_url}" alt="ATTACHMENT" loading="lazy">
-                    </div>`;
+                    imgHtml = `<div class="post-image-container"><img src="${post.image_url}" alt="ATTACHMENT" loading="lazy"></div>`;
                 }
 
+                // DELETE BUTTON (Owner only)
+                let deleteHtml = '';
+                if(isOwner) {
+                    deleteHtml = `<button onclick="window.deletePost('${post.id}')" class="text-term-red hover:text-white p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                }
+
+                // COMMENTS HTML (Hidden by default)
                 let commentsHtml = '';
                 if(comments.length > 0) {
-                    commentsHtml = `<div class="mt-3 pt-2 border-t border-[#222] space-y-2">`;
-                    comments.forEach(c => { commentsHtml += `<div class="text-[11px] text-gray-400 font-mono wrap-text"><span class="text-term-green font-bold"><</span> ${c.content}</div>`; });
+                    commentsHtml = `<div id="comment-section-${post.id}" class="hidden mt-3 pt-2 border-t border-[#222] space-y-2">`;
+                    comments.forEach(c => {
+                        commentsHtml += `
+                        <div class="flex justify-between items-start group">
+                            <div class="text-[11px] text-gray-400 font-mono wrap-text flex-1"><span class="text-term-green font-bold"><</span> ${c.content}</div>
+                            <button onclick="window.replyToUser('${post.id}', '${c.ic_name}')" class="text-gray-600 hover:text-white ml-2 opacity-0 group-hover:opacity-100 transition"><i data-lucide="reply" class="w-3 h-3"></i></button>
+                        </div>`;
+                    });
                     commentsHtml += `</div>`;
                 }
 
                 const html = `
                 <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors animate-[pulse_0.2s_ease-out]">
+                    <!-- Header -->
                     <div class="bg-[#111] px-3 py-1.5 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
                         <div><span class="text-white font-bold">usr@${post.ic_name}</span></div>
-                        <div class="text-[9px]">ID:${post.id.substring(0,6)}</div>
+                        <div class="flex items-center gap-2">
+                            <span>ID:${post.id.substring(0,6)}</span>
+                            ${deleteHtml}
+                        </div>
                     </div>
+                    
+                    <!-- Content -->
                     <div class="p-4">
                         <div class="text-sm text-gray-300 font-mono wrap-text leading-relaxed">${post.content}</div>
                         ${imgHtml}
                     </div>
                     
-                    <div class="px-3 py-1.5 border-t border-[#222] flex items-center justify-between text-[10px] font-mono bg-[#0a0a0a]">
+                    <!-- Actions (Icons Only) -->
+                    <div class="px-3 py-2 border-t border-[#222] flex items-center justify-between bg-[#0a0a0a]">
                         <div class="flex gap-4">
-                            <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="hover:text-term-green flex items-center gap-1.5 p-1 ${isLiked ? 'text-term-green' : 'text-gray-600'}">
-                                [ VOUCH: <span class="font-bold">${likeCount}</span> ]
+                            <!-- LIKE -->
+                            <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600 hover:text-white'} transition">
+                                <i data-lucide="thumbs-up" class="w-4 h-4 ${isLiked ? 'fill-current' : ''}"></i>
+                                <span class="text-xs font-bold">${likeCount > 0 ? likeCount : ''}</span>
                             </button>
-                            <button onclick="document.getElementById('comment-box-${post.id}').classList.toggle('hidden')" class="hover:text-white text-gray-600 p-1">
-                                [ REPLY ]
+                            <!-- COMMENT TOGGLE -->
+                            <button onclick="window.toggleComments('${post.id}')" class="flex items-center gap-1 text-gray-600 hover:text-white transition">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <span class="text-xs font-bold">${comments.length > 0 ? comments.length : ''}</span>
                             </button>
                         </div>
                     </div>
 
+                    <!-- Hidden Comment Box -->
                     <div class="px-3 pb-3 bg-[#0a0a0a]">
                         ${commentsHtml}
                         <div id="comment-box-${post.id}" class="hidden mt-2 flex gap-2">
@@ -435,19 +400,25 @@
                 </div>`;
                 container.insertAdjacentHTML('beforeend', html);
             });
-            if(typeof lucide !== 'undefined') lucide.createIcons();
+            lucide.createIcons();
         }
 
         window.toggleLike = async function(postId) {
             const btn = document.getElementById(`btn-like-${postId}`);
-            let countSpan = btn.querySelector('span');
-            let count = parseInt(countSpan.innerText);
+            const icon = btn.querySelector('i');
+            const countSpan = btn.querySelector('span');
+            let count = parseInt(countSpan.innerText) || 0;
+            
             if (btn.classList.contains('text-term-green')) {
+                // Unlike
                 btn.classList.remove('text-term-green'); btn.classList.add('text-gray-600');
-                countSpan.innerText = count - 1;
+                icon.classList.remove('fill-current');
+                countSpan.innerText = count - 1 > 0 ? count - 1 : '';
                 await sbClient.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
             } else {
+                // Like
                 btn.classList.add('text-term-green'); btn.classList.remove('text-gray-600');
+                icon.classList.add('fill-current');
                 countSpan.innerText = count + 1;
                 await sbClient.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
             }
@@ -507,6 +478,14 @@
             if(error) { window.showToast("ERROR", error.message, true); btn.disabled = false; }
             else { window.showToast("SENT", "PACKET DELIVERED"); btn.innerText = "PENDING..."; }
         }
+
+        // INIT LISTENERS
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-post').addEventListener('click', window.submitPost);
+            document.getElementById('post-content').addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.submitPost(); } });
+            document.getElementById('post-img-url').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.submitPost(); } });
+            init();
+        });
     </script>
 </body>
 </html>
