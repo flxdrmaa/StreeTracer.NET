@@ -46,7 +46,8 @@
         .post-image-container img { width: 100%; height: auto; display: block; opacity: 0.9; }
 
         .blink-red { animation: blink 1s infinite; color: #ff3333; }
-        .wrap-text { white-space: pre-wrap; word-wrap: break-word; }
+        /* Word wrap fix for comments */
+        .wrap-text { white-space: pre-wrap; word-wrap: break-word; word-break: break-word; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
         .term-toast {
@@ -280,10 +281,8 @@
             else { window.showToast("SYSTEM", "PACKET WIPED"); fetchFeed(); }
         }
 
-        // NEW: DELETE COMMENT FUNCTION
         window.deleteComment = async function(commentId) {
             if(!confirm("PRUNE THIS COMMENT NODE?")) return;
-            // Hanya bisa hapus jika user_id sesuai
             const { error } = await sbClient.from('comments').delete().eq('id', commentId).eq('user_id', currentUser.id);
             if(error) window.showToast("ERROR", "PRUNE FAILED", true);
             else { window.showToast("SYSTEM", "NODE PRUNED"); fetchFeed(); }
@@ -296,7 +295,6 @@
                 indicator.innerHTML = `<span class="text-term-green animate-pulse">>> Replying to ${username || 'ANONYMOUS'}</span> <button onclick="window.cancelReply('${postId}')" class="text-red-500 hover:text-white ml-2 text-[10px]">[CANCEL]</button>`;
                 indicator.classList.remove('hidden');
             }
-            // Force open box
             document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
             const section = document.getElementById(`comment-section-${postId}`);
             if(section) section.classList.remove('hidden');
@@ -356,33 +354,32 @@
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
                 const isOwner = post.user_id === currentUser.id;
                 
-                // ORGANIZE COMMENTS
                 const allComments = post.comments || [];
                 const rootComments = allComments.filter(c => !c.parent_id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                 
-                // RECURSIVE RENDERER
+                // RECURSIVE RENDERER (CLEANED UP)
                 const renderComment = (comment, level = 0) => {
                     const children = allComments.filter(c => c.parent_id === comment.id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-                    const marginLeft = level > 0 ? 'ml-3 sm:ml-6 border-l border-[#333] pl-2' : '';
-                    const connector = level > 0 ? '<span class="text-[#333] mr-1">|__</span>' : '';
                     
+                    // Indentation calculation
+                    const indent = level * 12; 
                     const isCommentOwner = comment.user_id === currentUser.id;
 
-                    // TOMBOL DELETE COMMENT (Hanya jika milik sendiri)
+                    // Buttons (New Line)
                     const deleteBtn = isCommentOwner ? 
-                        `<button onclick="window.deleteComment('${comment.id}')" class="text-term-red hover:text-white ml-2 text-[10px] font-bold">[DEL]</button>` : '';
+                        `<button onclick="window.deleteComment('${comment.id}')" class="text-term-red hover:text-white text-[9px] font-bold">[DEL]</button>` : '';
 
-                    // TOMBOL REPLY TEXT (Selalu muncul untuk kemudahan Android)
-                    const replyBtn = `<button onclick="window.initReply('${post.id}', '${comment.id}', 'ANONYMOUS')" class="text-gray-500 hover:text-white ml-2 text-[10px] font-bold">[REPLY]</button>`;
+                    const replyBtn = `<button onclick="window.initReply('${post.id}', '${comment.id}', 'ANONYMOUS')" class="text-gray-500 hover:text-white text-[9px] font-bold">[REPLY]</button>`;
 
                     let html = `
-                    <div class="${marginLeft} mb-1.5 group">
-                        <div class="flex flex-col sm:flex-row sm:items-start text-[11px] font-mono">
-                            <div class="text-gray-400 wrap-text flex-1">
-                                ${connector}<span class="text-term-green font-bold">ANONYMOUS:</span> ${comment.content}
+                    <div style="padding-left: ${indent}px" class="mt-2 group">
+                        <div class="border-l border-[#333] pl-2 hover:border-term-green transition-colors duration-300">
+                            <!-- Text Content -->
+                            <div class="text-[11px] text-gray-400 font-mono wrap-text leading-tight">
+                                <span class="text-term-green font-bold">ANONYMOUS:</span> ${comment.content}
                             </div>
-                            <!-- Action Buttons Inline for better UX -->
-                            <div class="flex items-center mt-1 sm:mt-0">
+                            <!-- Action Buttons Row -->
+                            <div class="flex items-center gap-3 mt-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                                 ${replyBtn}
                                 ${deleteBtn}
                             </div>
@@ -393,10 +390,9 @@
                     return html;
                 };
 
-                // GENERATE HTML COMMENTS
                 let commentsHtml = '';
                 if(rootComments.length > 0) {
-                    commentsHtml = `<div id="comment-section-${post.id}" class="hidden mt-3 pt-2 border-t border-[#222] space-y-2">`;
+                    commentsHtml = `<div id="comment-section-${post.id}" class="hidden mt-3 pt-2 border-t border-[#222]">`;
                     rootComments.forEach(root => { commentsHtml += renderComment(root); });
                     commentsHtml += `</div>`;
                 }
