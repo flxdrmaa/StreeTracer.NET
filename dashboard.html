@@ -39,7 +39,7 @@
         .onion-btn:hover:not(:disabled) { background: #222; color: #fff; border-color: #666; }
         .onion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .hidden { display: none !important; }
 
         .post-image-container { width: 100%; margin-top: 10px; border: 1px solid #333; background: #000; position: relative; }
@@ -152,6 +152,27 @@
     </div>
 
     <!-- MODALS -->
+    
+    <!-- 1. DELETE CONFIRMATION MODAL (NEW) -->
+    <div id="modal-confirm" class="modal-overlay hidden">
+        <div class="onion-box w-[90%] max-w-sm p-0 border border-term-red bg-black shadow-[0_0_30px_rgba(255,51,51,0.15)] animate-[pulse_1.5s_infinite]">
+            <div class="bg-red-900/20 p-3 border-b border-term-red flex items-center justify-between">
+                <span class="text-term-red font-bold text-sm tracking-widest blink-red">>> WARNING: DATA PURGE</span>
+                <i data-lucide="alert-triangle" class="text-term-red w-5 h-5"></i>
+            </div>
+            <div class="p-5 text-center">
+                <p class="text-gray-300 text-xs font-mono leading-relaxed mb-4">
+                    Target data cluster will be permanently erased from the network node. This action is <span class="text-white font-bold">IRREVERSIBLE</span>.
+                </p>
+                <div class="flex justify-center gap-3 mt-2">
+                    <button onclick="window.closeModals()" class="text-gray-500 text-xs hover:text-white border border-gray-700 px-4 py-2 hover:border-gray-500 transition">[ ABORT ]</button>
+                    <button onclick="window.executeDelete()" class="bg-term-red text-black text-xs font-bold px-4 py-2 hover:bg-red-700 transition tracking-wider">CONFIRM_ERASE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. CREATE CLUB MODAL -->
     <div id="modal-create-club" class="modal-overlay hidden">
         <div class="onion-box w-[95%] max-w-md p-4 bg-black border border-term-green">
             <h2 class="text-term-green font-bold mb-4 border-b border-term-green pb-2">> CREATE_CREW</h2>
@@ -166,6 +187,7 @@
         </div>
     </div>
 
+    <!-- 3. CLUB INFO MODAL -->
     <div id="modal-club-info" class="modal-overlay hidden">
         <div class="onion-box w-[95%] max-w-lg p-0">
             <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
@@ -199,6 +221,9 @@
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
         let activeReplyId = null; 
+        
+        // GLOBAL DELETE STATE
+        let pendingDelete = null; // { type: 'post'|'comment', id: '...' }
 
         // TOAST NOTIFICATION
         window.showToast = function(title, message, isError = false) {
@@ -236,7 +261,42 @@
             setTimeout(async () => { await sbClient.auth.signOut(); window.location.href = 'index.html'; }, 1000);
         }
         window.openCreateClubModal = function() { document.getElementById('modal-create-club').classList.remove('hidden'); }
-        window.closeModals = function() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); }
+        window.closeModals = function() { 
+            document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); 
+            pendingDelete = null; // Reset delete state
+        }
+
+        // --- NEW DELETE LOGIC ---
+        window.confirmDeletePost = function(postId) {
+            pendingDelete = { type: 'post', id: postId };
+            document.getElementById('modal-confirm').classList.remove('hidden');
+        }
+
+        window.confirmDeleteComment = function(commentId) {
+            pendingDelete = { type: 'comment', id: commentId };
+            document.getElementById('modal-confirm').classList.remove('hidden');
+        }
+
+        window.executeDelete = async function() {
+            if (!pendingDelete) return;
+            
+            // UI Feedback inside modal button? Or just execute.
+            window.closeModals(); // Close modal immediately
+            
+            if (pendingDelete.type === 'post') {
+                const { error } = await sbClient.from('posts').delete().eq('id', pendingDelete.id).eq('user_id', currentUser.id);
+                if(error) window.showToast("ERROR", "DELETE FAILED", true);
+                else { window.showToast("SYSTEM", "TRACE ELIMINATED"); fetchFeed(); }
+            } 
+            else if (pendingDelete.type === 'comment') {
+                const { error } = await sbClient.from('comments').delete().eq('id', pendingDelete.id).eq('user_id', currentUser.id);
+                if(error) window.showToast("ERROR", "PRUNE FAILED", true);
+                else { window.showToast("SYSTEM", "NODE PRUNED"); fetchFeed(); }
+            }
+            
+            pendingDelete = null;
+        }
+        // ------------------------
 
         // 4. POST & COMMENT LOGIC
         window.submitPost = async function() {
@@ -271,20 +331,6 @@
             btn.innerText = "SEND"; btn.disabled = false;
             window.showToast("SUCCESS", "UPLOADED");
             fetchFeed();
-        }
-
-        window.deletePost = async function(postId) {
-            if(!confirm("DELETE THIS PACKET PERMANENTLY?")) return;
-            const { error } = await sbClient.from('posts').delete().eq('id', postId).eq('user_id', currentUser.id);
-            if(error) window.showToast("ERROR", "DELETE FAILED", true);
-            else { window.showToast("SYSTEM", "PACKET WIPED"); fetchFeed(); }
-        }
-
-        window.deleteComment = async function(commentId) {
-            if(!confirm("PRUNE THIS COMMENT NODE?")) return;
-            const { error } = await sbClient.from('comments').delete().eq('id', commentId).eq('user_id', currentUser.id);
-            if(error) window.showToast("ERROR", "PRUNE FAILED", true);
-            else { window.showToast("SYSTEM", "NODE PRUNED"); fetchFeed(); }
         }
 
         window.initReply = function(postId, commentId, username) {
@@ -364,7 +410,7 @@
 
                     // Buttons
                     const deleteBtn = isCommentOwner ? 
-                        `<button onclick="window.deleteComment('${comment.id}')" class="text-term-red hover:text-white text-[9px] font-bold uppercase">[DEL]</button>` : '';
+                        `<button onclick="window.confirmDeleteComment('${comment.id}')" class="text-term-red hover:text-white text-[9px] font-bold uppercase">[DEL]</button>` : '';
 
                     const replyBtn = `<button onclick="window.initReply('${post.id}', '${comment.id}', 'ANONYMOUS')" class="text-gray-500 hover:text-white text-[9px] font-bold uppercase">[REPLY]</button>`;
 
@@ -406,7 +452,7 @@
                 // DELETE POST BUTTON
                 let deleteHtml = '';
                 if(isOwner) {
-                    deleteHtml = `<button onclick="window.deletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                    deleteHtml = `<button onclick="window.confirmDeletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
                 }
 
                 const html = `
