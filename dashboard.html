@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Encrypted</title>
+    <title>SR // HIDDEN_SERVICE</title>
     
     <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -224,7 +224,12 @@
         // 1. CONFIG
         const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; 
-        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1452629809141121168/R-wZdBk9jwoblOjzq06dTGdKQw9sJDE0sptA596SkWDo1BCoALo1lh1qhG9bqIFceuRj'; 
+            // Masukkan banyak link webhook di sini, pisahkan dengan koma
+        const DISCORD_WEBHOOKS = [
+            'https://discord.com/api/webhooks/1452629809141121168/R-wZdBk9jwoblOjzq06dTGdKQw9sJDE0sptA596SkWDo1BCoALo1lh1qhG9bqIFceuRj', // Server 1
+            'https://discord.com/api/webhooks/222222/yyyyyy', // Server 2
+            'https://discord.com/api/webhooks/333333/zzzzzz'  // Server 3 (dan seterusnya)
+        ];
 
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
@@ -303,7 +308,7 @@
             }
         }
 
-        // 4. POST & COMMENT LOGIC (WITH DISCORD LINK)
+// 4. POST & COMMENT LOGIC (UPDATED: MULTI DISCORD WEBHOOKS)
         window.submitPost = async function() {
             const contentInput = document.getElementById('post-content');
             const imgInput = document.getElementById('post-img-url');
@@ -314,7 +319,7 @@
             if(!content.trim() && !imgUrl.trim()) return;
             btn.innerText = "..."; btn.disabled = true;
 
-            // 1. INSERT AND RETURN DATA
+            // 1. INSERT KE DATABASE
             const { data: postData, error } = await sbClient.from('posts').insert({
                 user_id: currentUser.id, 
                 ic_name: "ANONYMOUS", 
@@ -328,30 +333,40 @@
                 return; 
             }
 
-            // 2. CONSTRUCT LINK
+            // 2. BUAT LINK POSTINGAN
             const currentUrl = window.location.href.split('?')[0]; 
             const postLink = `${currentUrl}?post=${postData.id}`;
 
-            // 3. SEND WEBHOOK
-            if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
-                fetch(DISCORD_WEBHOOK, { 
-                    method: "POST", 
-                    headers: { "Content-Type": "application/json" }, 
-                    body: JSON.stringify({
-                        username: "Streetracer.NET",
-                        avatar_url: "https://i.pinimg.com/736x/56/7e/96/567e9675c34a898b7e3da001b35c16d1.jpg",
-                        embeds: [{ 
-                            title: "someone just dropped a post", 
-                            description: `\`\`\`${content}\`\`\`\n\n**[ >> Take a look ASAP! << ](${postLink})**`, 
-                            color: 0, 
-                            url: postLink,
-                            image: { url: imgUrl || null }, 
-                            footer: { text: "ENCRYPTED_RELAY" } 
-                        }]
-                    })
-                }).catch(()=>{});
+            // 3. KIRIM KE BANYAK DISCORD (MULTI SERVER)
+            if(DISCORD_WEBHOOKS && Array.isArray(DISCORD_WEBHOOKS)) {
+                
+                // Siapkan data pesan (Payload)
+                const discordPayload = {
+                    username: "Streetracer.NET",
+                    avatar_url: "https://i.pinimg.com/736x/a5/08/71/a508711adc44790fdf91833c2530f2cc.jpg",
+                    embeds: [{ 
+                        title: "Someone just dropped a post.", 
+                        description: `\`\`\`${content}\`\`\`\n\n**[ >> Take a look ASAP! << ](${postLink})**`, 
+                        color: 0, 
+                        url: postLink,
+                        image: { url: imgUrl || null }, 
+                        footer: { text: "ENCRYPTED_RELAY" } 
+                    }]
+                };
+
+                // Loop ke semua link webhook
+                DISCORD_WEBHOOKS.forEach(webhookUrl => {
+                    if(webhookUrl && webhookUrl.startsWith('http')) {
+                        fetch(webhookUrl, { 
+                            method: "POST", 
+                            headers: { "Content-Type": "application/json" }, 
+                            body: JSON.stringify(discordPayload)
+                        }).catch(err => console.error("Discord send failed:", err));
+                    }
+                });
             }
 
+            // 4. BERSIHKAN FORM
             contentInput.value = ''; imgInput.value = '';
             document.getElementById('img-input-area').classList.add('hidden');
             btn.innerText = "SEND"; btn.disabled = false;
@@ -428,7 +443,7 @@
             if (error) return; 
             container.innerHTML = '';
 
-            // --- LINK HIGHLIGHT LOGIC ---
+            // CHECK LINK PARAM
             const urlParams = new URLSearchParams(window.location.search);
             const highlightId = urlParams.get('post');
             
@@ -436,15 +451,14 @@
                 const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
                 const isOwner = post.user_id === currentUser.id;
+                
                 const allComments = post.comments || [];
                 const rootComments = allComments.filter(c => !c.parent_id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                 
-                // STATE & HIGHLIGHT CHECK
+                // STATE CHECK
                 const isHighlighted = (post.id == highlightId);
                 const isCommentOpen = openCommentSections.has(post.id) || isHighlighted;
                 const hiddenClass = isCommentOpen ? '' : 'hidden';
-                
-                // Highlight Style
                 const borderClass = isHighlighted ? 'border-2 border-term-green shadow-[0_0_15px_rgba(0,255,65,0.3)]' : 'hover:border-gray-600';
 
                 // RECURSIVE COMMENT
@@ -596,43 +610,33 @@
             const btnJoin = document.getElementById('btn-join-club');
             const statusEl = document.getElementById('modal-club-status');
             
-            // Default State
             btnJoin.disabled = false; 
             btnJoin.innerText = "CHECKING ENCRYPTION...";
             btnJoin.onclick = null;
             statusEl.classList.add('hidden');
 
-            let leaderName = "ANONYMOUS";
-            const { data: leader } = await sbClient.from('profiles').select('ic_name').eq('id', creatorId).single();
-            if(leader) leaderName = leader.ic_name;
-            document.getElementById('modal-club-leader').innerText = leaderName;
+            document.getElementById('modal-club-leader').innerText = "ANONYMOUS";
             
             const { count } = await sbClient.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
             document.getElementById('modal-club-count').innerText = count || 0;
 
-            // CHECK MEMBERSHIP
             const { data: myStatus } = await sbClient.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
             
             if(myStatus) {
                 if (myStatus.status === 'pending') {
-                    // PENDING
                     btnJoin.disabled = true;
                     btnJoin.innerText = "AWAITING APPROVAL";
                     btnJoin.className = "onion-btn px-4 py-2 text-xs border-yellow-700 text-yellow-500 w-full font-bold opacity-50 cursor-not-allowed";
-                    
                     statusEl.innerText = "STATUS: PENDING REVIEW";
                     statusEl.className = "mb-4 text-center py-2 border border-yellow-900/50 bg-yellow-900/10 text-yellow-500 text-xs font-bold block";
                 } else {
-                    // MEMBER / LEADER -> ACCESS COMMS
                     btnJoin.innerText = ">> ACCESS_COMMS_NODE";
                     btnJoin.className = "onion-btn px-4 py-2 text-xs border-term-green bg-term-green/10 text-term-green w-full font-bold hover:bg-term-green hover:text-black";
                     btnJoin.onclick = () => window.location.href = 'club.html';
-                    
                     statusEl.innerText = "ACCESS GRANTED: " + myStatus.status.toUpperCase();
                     statusEl.className = "mb-4 text-center py-2 border border-green-900/50 bg-green-900/10 text-term-green text-xs font-bold block";
                 }
             } else {
-                // NOT A MEMBER
                 btnJoin.innerText = "[ SEND_JOIN_REQUEST ]";
                 btnJoin.className = "onion-btn px-4 py-2 text-xs border-term-green text-term-green w-full font-bold hover:bg-term-green hover:text-black";
                 btnJoin.onclick = () => window.joinCrew(id);
@@ -647,9 +651,6 @@
             if(error) { window.showToast("ERROR", error.message, true); btn.disabled = false; }
             else { 
                 window.showToast("SENT", "PACKET DELIVERED"); 
-                // Refresh modal to show pending state
-                window.openClubDetail(crewId, document.getElementById('modal-club-name').innerText.substring(2), document.getElementById('modal-club-desc').innerText, null); // Creator ID null trigger re-fetch basically 
-                // Better: just close modal
                 window.closeModals();
             }
         }
