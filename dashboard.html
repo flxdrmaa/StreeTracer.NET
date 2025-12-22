@@ -39,6 +39,7 @@
         .onion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .hidden { display: none !important; }
 
         .spoiler-img-container {
             position: relative;
@@ -55,8 +56,6 @@
         .spoiler-img-container.revealed { background: #000; border: 1px solid #444; }
 
         .blink-red { animation: blink 1s infinite; color: #ff3333; }
-        /* Utility to hide elements */
-        .hidden { display: none !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -221,27 +220,24 @@
         </div>
     </div>
 
+    <!-- SCRIPT UTAMA -->
     <script>
-        // INISIALISASI ICON
+        // Init Icon
         if(typeof lucide !== 'undefined') lucide.createIcons();
 
-        // 1. SUPABASE CONFIG
+        // 1. CONFIG
         const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; 
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1450862700736413887/pScPkMGmyFiHTQpZMBB9_tGS14pgjtxQ6cyhHqq7j0aOOgwpvJVQLoIQeu8hDm4ZUNZZ'; 
 
-        // Cek jika Supabase library berhasil diload
-        if(typeof window.supabase === 'undefined') {
-            alert("CRITICAL ERROR: Database libraries failed to load. Please refresh.");
-        }
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 2. INISIALISASI DB - Menggunakan nama 'sbClient' untuk menghindari konflik nama variable 'supabase'
+        const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
 
-        // 2. MAIN LOGIC
+        // 3. MAIN INIT FUNCTION
         async function init() {
             // Cek Session
-            const { data: { session }, error } = await supabase.auth.getSession();
+            const { data: { session }, error } = await sbClient.auth.getSession();
             
             if (!session) { 
                 window.location.href = 'index.html'; 
@@ -254,7 +250,7 @@
             if (currentUser.user_metadata && currentUser.user_metadata.ic_name) {
                 finalName = currentUser.user_metadata.ic_name;
             } else {
-                const { data: profile } = await supabase.from('profiles').select('ic_name').eq('id', currentUser.id).single();
+                const { data: profile } = await sbClient.from('profiles').select('ic_name').eq('id', currentUser.id).single();
                 if(profile) finalName = profile.ic_name;
             }
             currentUser.ic_name = finalName; 
@@ -266,9 +262,9 @@
             fetchClubs();
         }
 
-        // 3. EXPOSE FUNCTIONS TO WINDOW (Agar onclick HTML berfungsi)
+        // 4. ATTACH FUNCTIONS TO WINDOW (Fixes "is not a function")
         window.handleLogout = async function() {
-            await supabase.auth.signOut();
+            await sbClient.auth.signOut();
             window.location.href = 'index.html';
         }
 
@@ -280,7 +276,7 @@
             document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
         }
 
-        // 4. POSTING LOGIC
+        // 5. POSTING LOGIC (With Enter Key Fix)
         window.submitPost = async function() {
             const contentInput = document.getElementById('post-content');
             const imgInput = document.getElementById('post-img-url');
@@ -298,7 +294,7 @@
             btn.innerText = "SENDING..."; 
             btn.disabled = true;
 
-            const { error } = await supabase.from('posts').insert({
+            const { error } = await sbClient.from('posts').insert({
                 user_id: currentUser.id, 
                 ic_name: currentUser.ic_name, 
                 content: content, 
@@ -329,15 +325,15 @@
             fetchFeed();
         }
 
-        // 5. EVENT LISTENERS SETUP
+        // 6. EVENT LISTENERS
         document.addEventListener('DOMContentLoaded', () => {
             // Button Click
             document.getElementById('btn-post').addEventListener('click', window.submitPost);
 
-            // Textarea Enter (Shift+Enter = New line)
+            // Textarea Enter (Shift+Enter = New line, Enter = Submit)
             document.getElementById('post-content').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault(); // Mencegah baris baru
+                    e.preventDefault(); 
                     window.submitPost();
                 }
             });
@@ -350,13 +346,14 @@
                 }
             });
 
+            // Jalankan init
             init();
         });
 
-        // 6. FEED & CLUBS LOGIC
+        // 7. FEED & CLUBS LOGIC
         async function fetchFeed() {
             const container = document.getElementById('feed-container');
-            const { data: posts, error } = await supabase.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
+            const { data: posts, error } = await sbClient.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
             
             if (error) { console.error("Feed Error", error); return; }
             container.innerHTML = '';
@@ -398,17 +395,17 @@
             if (btn.classList.contains('text-term-green')) {
                 btn.classList.remove('text-term-green'); btn.classList.add('text-gray-600');
                 countSpan.innerText = count - 1;
-                await supabase.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
+                await sbClient.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
             } else {
                 btn.classList.add('text-term-green'); btn.classList.remove('text-gray-600');
                 countSpan.innerText = count + 1;
-                await supabase.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
+                await sbClient.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
             }
         }
 
         async function fetchClubs() {
             const list = document.getElementById('club-list');
-            const { data: crews } = await supabase.from('crews').select('*').order('created_at', { ascending: false });
+            const { data: crews } = await sbClient.from('crews').select('*').order('created_at', { ascending: false });
             list.innerHTML = '';
             if(!crews || crews.length === 0) { list.innerHTML = '<div class="p-2 text-center text-gray-800 italic text-[10px]">NO_DATA</div>'; return; }
             crews.forEach(crew => {
@@ -424,9 +421,9 @@
             const name = document.getElementById('input-crew-name').value.trim();
             const desc = document.getElementById('input-crew-desc').value.trim();
             if(!name) return alert("ERROR: NAME_NULL");
-            const { data: crew, error } = await supabase.from('crews').insert({ name: name, description: desc, created_by: currentUser.id }).select().single();
+            const { data: crew, error } = await sbClient.from('crews').insert({ name: name, description: desc, created_by: currentUser.id }).select().single();
             if(error) return alert("DB_ERR: " + error.message);
-            await supabase.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
+            await sbClient.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
             alert("SUCCESS: NODE_CREATED"); window.closeModals(); fetchClubs();
         }
 
@@ -438,12 +435,12 @@
             btnJoin.disabled = false; btnJoin.innerText = "SEND_JOIN_REQUEST";
             btnJoin.onclick = () => window.joinCrew(id);
             let leaderName = "ANONYMOUS";
-            const { data: leader } = await supabase.from('profiles').select('ic_name').eq('id', creatorId).single();
+            const { data: leader } = await sbClient.from('profiles').select('ic_name').eq('id', creatorId).single();
             if(leader) leaderName = leader.ic_name;
             document.getElementById('modal-club-leader').innerText = leaderName;
-            const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
+            const { count } = await sbClient.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
             document.getElementById('modal-club-count').innerText = count || 0;
-            const { data: myStatus } = await supabase.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
+            const { data: myStatus } = await sbClient.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
             const statusEl = document.getElementById('modal-club-status');
             if(myStatus) {
                 btnJoin.disabled = true;
@@ -456,7 +453,7 @@
         window.joinCrew = async function(crewId) {
             const btn = document.getElementById('btn-join-club');
             btn.innerText = "..."; btn.disabled = true;
-            const { error } = await supabase.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
+            const { error } = await sbClient.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
             if(error) { alert(error.message); btn.disabled = false; }
             else { alert("PACKET_SENT"); btn.innerText = "PENDING..."; }
         }
