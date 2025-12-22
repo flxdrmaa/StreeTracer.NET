@@ -30,13 +30,10 @@
     </script>
     <style>
         body { background-color: #000; color: #ccc; font-family: 'Courier Prime', monospace; font-size: 14px; overflow-x: hidden; }
-        
-        /* SCROLLBAR */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         
-        /* UTILS */
         .onion-box { background: #080808; border: 1px solid #333; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
         .onion-btn { border: 1px solid #444; background: #111; color: #888; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
         .onion-btn:hover:not(:disabled) { background: #222; color: #fff; border-color: #666; }
@@ -45,15 +42,12 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .hidden { display: none !important; }
 
-        /* IMAGE STYLE */
         .post-image-container { width: 100%; margin-top: 10px; border: 1px solid #333; background: #000; position: relative; }
         .post-image-container img { width: 100%; height: auto; display: block; opacity: 0.9; }
 
-        /* TEXT UTILS */
         .blink-red { animation: blink 1s infinite; color: #ff3333; }
         .wrap-text { white-space: pre-wrap; word-wrap: break-word; }
 
-        /* TOAST */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
         .term-toast {
             background: #000; border-left: 4px solid #00ff41; border-top: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333;
@@ -86,13 +80,10 @@
     </header>
 
     <!-- LAYOUT GRID -->
-    <!-- ORDER-1: SIDEBAR (Agar di mobile muncul paling atas) -->
-    <!-- ORDER-2: FEED (Agar di mobile muncul di bawah sidebar) -->
     <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-3 lg:p-4 mt-1">
         
         <!-- SIDEBAR (User & Club Directory) -->
         <aside class="lg:col-span-1 space-y-4 order-1">
-            <!-- User Info -->
             <div class="onion-box p-3 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div class="w-2 h-2 bg-term-green rounded-full animate-pulse shadow-[0_0_5px_#00ff41]"></div>
@@ -104,13 +95,11 @@
                 <i data-lucide="shield-check" class="w-5 h-5 text-gray-700"></i>
             </div>
 
-            <!-- Club Directory -->
             <div class="onion-box">
                 <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
                     <span class="text-xs text-gray-400 font-bold">/// CREW_LIST</span>
                     <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ + ]</button>
                 </div>
-                <!-- Scrollable list with fixed max height so it doesn't take too much space on mobile -->
                 <div id="club-list" class="flex flex-col text-xs max-h-[150px] lg:max-h-[400px] overflow-y-auto">
                     <div class="p-4 text-center text-gray-600">Scanning network...</div>
                 </div>
@@ -119,12 +108,10 @@
 
         <!-- MAIN FEED -->
         <main class="lg:col-span-2 space-y-4 order-2 pb-20">
-            <!-- Warning -->
             <div class="bg-red-900/10 border border-red-900/30 p-2 text-[10px] text-red-600 text-center uppercase tracking-widest font-bold">
                 *** Connection Encrypted (AES-256) ***
             </div>
 
-            <!-- Input Box -->
             <div class="onion-box p-3 relative group focus-within:border-term-green transition-colors">
                 <textarea id="post-content" class="w-full h-20 bg-black border border-[#333] p-3 text-sm text-gray-300 focus:border-term-green outline-none font-mono resize-none placeholder-gray-800" placeholder="Broadcast message..."></textarea>
                 
@@ -142,7 +129,6 @@
                 </div>
             </div>
 
-            <!-- Feed Stream -->
             <div id="feed-container" class="space-y-4">
                 <div class="text-center py-10 text-gray-600 text-xs font-mono">
                     <div class="animate-spin w-6 h-6 border-2 border-term-green border-t-transparent rounded-full mx-auto mb-2"></div>
@@ -151,7 +137,7 @@
             </div>
         </main>
 
-        <!-- RIGHT WIDGETS (Hidden on mobile) -->
+        <!-- RIGHT WIDGETS -->
         <aside class="hidden lg:block lg:col-span-1 space-y-4 order-3">
             <div class="onion-box p-3">
                 <div class="text-xs text-gray-500 mb-2 border-b border-[#333] pb-1 flex justify-between">
@@ -305,6 +291,11 @@
 
         window.replyToUser = function(postId, username) {
             const input = document.getElementById(`comment-input-${postId}`);
+            // Force open comment box
+            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
+            const section = document.getElementById(`comment-section-${postId}`);
+            if(section) section.classList.remove('hidden');
+            
             input.value = `>> ${username}: `;
             input.focus();
         }
@@ -339,7 +330,7 @@
                 // DELETE BUTTON (Owner only)
                 let deleteHtml = '';
                 if(isOwner) {
-                    deleteHtml = `<button onclick="window.deletePost('${post.id}')" class="text-term-red hover:text-white p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                    deleteHtml = `<button onclick="window.deletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
                 }
 
                 // COMMENTS HTML (Hidden by default)
@@ -360,7 +351,7 @@
                 <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors animate-[pulse_0.2s_ease-out]">
                     <!-- Header -->
                     <div class="bg-[#111] px-3 py-1.5 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
-                        <div><span class="text-white font-bold">usr@${post.ic_name}</span></div>
+                        <div><span class="text-white font-bold">ANONYMOUS</span></div>
                         <div class="flex items-center gap-2">
                             <span>ID:${post.id.substring(0,6)}</span>
                             ${deleteHtml}
@@ -373,12 +364,12 @@
                         ${imgHtml}
                     </div>
                     
-                    <!-- Actions (Icons Only) -->
+                    <!-- Actions (Icons Only, Same Icon Style) -->
                     <div class="px-3 py-2 border-t border-[#222] flex items-center justify-between bg-[#0a0a0a]">
                         <div class="flex gap-4">
-                            <!-- LIKE -->
+                            <!-- LIKE (Toggle Color Only) -->
                             <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600 hover:text-white'} transition">
-                                <i data-lucide="thumbs-up" class="w-4 h-4 ${isLiked ? 'fill-current' : ''}"></i>
+                                <i data-lucide="thumbs-up" class="w-4 h-4"></i>
                                 <span class="text-xs font-bold">${likeCount > 0 ? likeCount : ''}</span>
                             </button>
                             <!-- COMMENT TOGGLE -->
@@ -405,23 +396,27 @@
 
         window.toggleLike = async function(postId) {
             const btn = document.getElementById(`btn-like-${postId}`);
-            const icon = btn.querySelector('i');
             const countSpan = btn.querySelector('span');
-            let count = parseInt(countSpan.innerText) || 0;
-            
+            let currentText = countSpan.innerText.trim();
+            let count = currentText === '' ? 0 : parseInt(currentText);
+
+            // Optimistic Update
             if (btn.classList.contains('text-term-green')) {
                 // Unlike
-                btn.classList.remove('text-term-green'); btn.classList.add('text-gray-600');
-                icon.classList.remove('fill-current');
-                countSpan.innerText = count - 1 > 0 ? count - 1 : '';
+                btn.classList.remove('text-term-green');
+                btn.classList.add('text-gray-600');
+                count--;
                 await sbClient.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
             } else {
                 // Like
-                btn.classList.add('text-term-green'); btn.classList.remove('text-gray-600');
-                icon.classList.add('fill-current');
-                countSpan.innerText = count + 1;
+                btn.classList.add('text-term-green');
+                btn.classList.remove('text-gray-600');
+                count++;
                 await sbClient.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
             }
+            
+            // Render text
+            countSpan.innerText = count > 0 ? count : '';
         }
 
         async function fetchClubs() {
