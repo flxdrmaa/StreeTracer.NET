@@ -303,7 +303,7 @@
             }
         }
 
-        // 4. POST & COMMENT LOGIC
+        // 4. POST & COMMENT LOGIC (WITH DISCORD LINK)
         window.submitPost = async function() {
             const contentInput = document.getElementById('post-content');
             const imgInput = document.getElementById('post-img-url');
@@ -314,21 +314,42 @@
             if(!content.trim() && !imgUrl.trim()) return;
             btn.innerText = "..."; btn.disabled = true;
 
-            const { error } = await sbClient.from('posts').insert({
+            // 1. INSERT AND RETURN DATA
+            const { data: postData, error } = await sbClient.from('posts').insert({
                 user_id: currentUser.id, 
                 ic_name: "ANONYMOUS", 
                 content: content, 
                 image_url: imgUrl || null
-            });
+            }).select().single();
 
-            if(error) { window.showToast("ERROR", error.message, true); btn.innerText = "SEND"; btn.disabled = false; return; }
+            if(error) { 
+                window.showToast("ERROR", error.message, true); 
+                btn.innerText = "SEND"; btn.disabled = false; 
+                return; 
+            }
 
+            // 2. CONSTRUCT LINK
+            const currentUrl = window.location.href.split('?')[0]; 
+            const postLink = `${currentUrl}?post=${postData.id}`;
+
+            // 3. SEND WEBHOOK
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
-                fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-                    username: "Streetracer.NET",
-                    avatar_url: "https://i.pinimg.com/736x/a5/08/71/a508711adc44790fdf91833c2530f2cc.jpg",
-                    embeds: [{ title: "Something new appeared on the network", description: `\`\`\`${content}\`\`\``, color: 0, image: { url: imgUrl || null }, footer: { text: "ENCRYPTED_RELAY" } }]
-                })}).catch(()=>{});
+                fetch(DISCORD_WEBHOOK, { 
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json" }, 
+                    body: JSON.stringify({
+                        username: "Streetracer.NET",
+                        avatar_url: "https://i.pinimg.com/736x/56/7e/96/567e9675c34a898b7e3da001b35c16d1.jpg",
+                        embeds: [{ 
+                            title: "someone just dropped a post", 
+                            description: `\`\`\`${content}\`\`\`\n\n**[ >> Take a look ASAP! << ](${postLink})**`, 
+                            color: 0, 
+                            url: postLink,
+                            image: { url: imgUrl || null }, 
+                            footer: { text: "ENCRYPTED_RELAY" } 
+                        }]
+                    })
+                }).catch(()=>{});
             }
 
             contentInput.value = ''; imgInput.value = '';
@@ -340,17 +361,16 @@
 
         window.initReply = function(postId, commentId, username) {
             activeReplyId = commentId;
-            const indicator = document.getElementById(`reply-indicator-${postId}`);
-            if(indicator) {
-                indicator.innerHTML = `<span class="text-term-green animate-pulse">>> Replying to ${username || 'ANONYMOUS'}</span> <button onclick="window.cancelReply('${postId}')" class="text-red-500 hover:text-white ml-2 text-[10px]">[CANCEL]</button>`;
-                indicator.classList.remove('hidden');
-            }
-            // OPEN BOX
             openCommentSections.add(postId);
             document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
             const section = document.getElementById(`comment-section-${postId}`);
             if(section) section.classList.remove('hidden');
 
+            const indicator = document.getElementById(`reply-indicator-${postId}`);
+            if(indicator) {
+                indicator.innerHTML = `<span class="text-term-green animate-pulse">>> Replying to ${username || 'ANONYMOUS'}</span> <button onclick="window.cancelReply('${postId}')" class="text-red-500 hover:text-white ml-2 text-[10px]">[CANCEL]</button>`;
+                indicator.classList.remove('hidden');
+            }
             document.getElementById(`comment-input-${postId}`).focus();
         }
 
@@ -407,18 +427,25 @@
             
             if (error) return; 
             container.innerHTML = '';
+
+            // --- LINK HIGHLIGHT LOGIC ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const highlightId = urlParams.get('post');
             
             posts.forEach(post => {
                 const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
                 const isOwner = post.user_id === currentUser.id;
-                
                 const allComments = post.comments || [];
                 const rootComments = allComments.filter(c => !c.parent_id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                 
-                // STATE CHECK
-                const isCommentOpen = openCommentSections.has(post.id);
+                // STATE & HIGHLIGHT CHECK
+                const isHighlighted = (post.id == highlightId);
+                const isCommentOpen = openCommentSections.has(post.id) || isHighlighted;
                 const hiddenClass = isCommentOpen ? '' : 'hidden';
+                
+                // Highlight Style
+                const borderClass = isHighlighted ? 'border-2 border-term-green shadow-[0_0_15px_rgba(0,255,65,0.3)]' : 'hover:border-gray-600';
 
                 // RECURSIVE COMMENT
                 const renderComment = (comment, level = 0) => {
@@ -468,7 +495,7 @@
                 }
 
                 const html = `
-                <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors animate-[pulse_0.2s_ease-out]">
+                <div id="post-${post.id}" class="onion-box p-0 mb-4 transition-all duration-500 animate-[pulse_0.2s_ease-out] ${borderClass}">
                     <div class="bg-[#111] px-3 py-1.5 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
                         <div><span class="text-white font-bold">ANONYMOUS</span></div>
                         <div class="flex items-center gap-2">
@@ -508,6 +535,15 @@
                 </div>`;
                 container.insertAdjacentHTML('beforeend', html);
             });
+            
+            // AUTO SCROLL
+            if(highlightId) {
+                setTimeout(() => {
+                    const el = document.getElementById(`post-${highlightId}`);
+                    if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
+            }
+
             lucide.createIcons();
         }
 
@@ -527,7 +563,6 @@
             countSpan.innerText = count > 0 ? count : '';
         }
 
-        // --- CLUB LOGIC ---
         async function fetchClubs() {
             const list = document.getElementById('club-list');
             const { data: crews } = await sbClient.from('crews').select('*').eq('status', 'approved').order('created_at', { ascending: false });
@@ -554,7 +589,6 @@
             window.showToast("SYSTEM", "REQUEST SENT. AWAITING APPROVAL."); window.closeModals();
         }
 
-        // --- OPEN DETAIL LOGIC (Link to Comms) ---
         window.openClubDetail = async function(id, name, desc, creatorId) {
             document.getElementById('modal-club-info').classList.remove('hidden');
             document.getElementById('modal-club-name').innerText = "./" + name;
