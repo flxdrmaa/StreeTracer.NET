@@ -3,157 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>StreetRacer.NET</title>
+    <title>SR // HIDDEN_SERVICE</title>
     
     <!-- LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <!-- FONT KHUSUS: COURIER PRIME -->
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { terminal: ['"VT323"', 'monospace'] },
-                    colors: { 'neon-red': '#ff0000', 'term-bg': '#050505' },
-                    animation: { 'pulse-fast': 'pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                    fontFamily: { 
+                        mono: ['"Courier Prime"', 'monospace'],
+                    },
+                    colors: { 
+                        'deep-black': '#050505', 
+                        'term-green': '#00ff41',
+                        'term-red': '#ff3333',
+                    }
                 }
             }
         }
     </script>
     <style>
-        body { background: #000; color: #ff0000; font-family: 'VT323', monospace; overflow-x: hidden; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { background: #500; border: 1px solid #000; }
+        body { 
+            background-color: #000; 
+            color: #ccc; 
+            font-family: 'Courier Prime', monospace; 
+            font-size: 14px;
+        }
         
-        .term-card { background: #050505; border: 1px solid #333; border-left: 2px solid #ff0000; margin-bottom: 1rem; }
-        .term-header { background: #111; padding: 4px 8px; font-size: 0.9rem; color: #888; border-bottom: 1px solid #333; }
-        .term-btn { border: 1px solid #333; background: #000; color: #888; text-transform: uppercase; padding: 4px 12px; cursor: pointer; transition: 0.2s; }
-        .term-btn:hover { border-color: #ff0000; color: #ff0000; }
-        .term-btn.active { background: #ff0000; color: #000; border-color: #ff0000; font-weight: bold; }
+        /* SCROLLBAR RETRO */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border: 1px solid #000; }
         
-        .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; z-index: 30; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        /* ELEMENTS */
+        .onion-box {
+            background: #080808;
+            border: 1px solid #333;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        .onion-btn {
+            border: 1px solid #444;
+            background: #111;
+            color: #888;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .onion-btn:hover { background: #222; color: #fff; border-color: #666; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; display: flex; align-items: center; justify-content: center; }
+
+        /* IMAGE SPOILER (SENSOR) */
+        .spoiler-img-container {
+            position: relative;
+            background: repeating-linear-gradient(45deg, #111, #111 10px, #222 10px, #222 20px);
+            border: 1px solid #333;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .spoiler-text {
+            background: #000;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 4px 8px;
+            z-index: 10;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .real-img {
+            width: 100%; height: auto; opacity: 0; transition: opacity 0.3s;
+        }
+        .spoiler-img-container.revealed .real-img { opacity: 1; }
+        .spoiler-img-container.revealed .spoiler-text { display: none; }
+        .spoiler-img-container.revealed { background: #000; border: 1px solid #444; }
+
+        /* GLITCH TEXT FOR BLACKLIST */
+        .blink-red { animation: blink-animation 1s steps(5, start) infinite; }
+        @keyframes blink-animation { to { visibility: hidden; } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <div class="fixed inset-0 pointer-events-none opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-0"></div>
-    <div class="scanline"></div>
-
-    <!-- NAVBAR -->
-    <nav class="h-14 border-b border-zinc-900 bg-black sticky top-0 z-50 flex items-center justify-between px-4 shadow-lg shadow-red-900/10">
-        <h1 class="text-2xl font-bold tracking-widest text-white cursor-default">STREETRACER<span class="text-neon-red">.NET</span></h1>
-        
-        <div class="flex items-center gap-4">
-            <!-- NAMA USER DI SINI -->
-            <div class="text-right leading-none hidden sm:block">
-                <div id="nav-ic-name" class="text-lg text-white font-bold">LOADING...</div>
-                <div class="text-[10px] text-zinc-500">OPERATIVE</div>
-            </div>
-            
-            <!-- TOMBOL LOGOUT FIX -->
-            <button onclick="handleLogout()" class="term-btn text-xs hover:bg-red-900 hover:text-white transition-colors border-red-900 text-red-500">
-                [ LOGOUT ]
-            </button>
+    <!-- FAKE TOR BROWSER HEADER -->
+    <header class="bg-[#1a1a1a] border-b border-[#333] p-1 flex items-center gap-2 sticky top-0 z-50 shadow-2xl">
+        <div class="flex gap-1 ml-2">
+            <div class="w-3 h-3 rounded-full bg-red-900/50 border border-red-700"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-900/50 border border-yellow-700"></div>
+            <div class="w-3 h-3 rounded-full bg-green-900/50 border border-green-700"></div>
         </div>
-    </nav>
-
-    <!-- LAYOUT GRID -->
-    <div class="flex-1 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 relative z-40">
         
-        <!-- SIDEBAR KIRI -->
-        <aside class="hidden lg:block lg:col-span-1 space-y-4 h-[calc(100vh-100px)] overflow-y-auto pr-2">
-            <div class="term-card p-4 text-center">
-                <i data-lucide="user" class="w-10 h-10 mx-auto text-zinc-600 mb-2"></i>
-                <h2 id="side-ic-name" class="text-xl text-white leading-none">...</h2>
-                <div class="text-zinc-500 text-sm mt-2 pt-2 border-t border-zinc-900">STATUS: ONLINE</div>
+        <!-- ADDRESS BAR -->
+        <div class="flex-1 bg-black border border-[#333] mx-2 px-2 py-1 flex items-center gap-2 text-xs rounded opacity-80">
+            <i data-lucide="lock" class="w-3 h-3 text-term-green"></i>
+            <span class="text-term-green">https://</span>
+            <span class="text-gray-500">sr-net-v3hidden.onion</span>
+        </div>
+
+        <div class="mr-2 cursor-pointer hover:text-white text-gray-500" onclick="handleLogout()">
+            <i data-lucide="power" class="w-4 h-4"></i>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-4 p-4 mt-2">
+        
+        <!-- SIDEBAR KIRI: CREW & NAV -->
+        <aside class="md:col-span-1 space-y-4">
+            
+            <!-- STATUS LOGIN (PENGGANTI IDENTITY BESAR) -->
+            <div class="onion-box p-2 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 bg-term-green rounded-full animate-pulse"></div>
+                    <span id="side-ic-name" class="text-xs font-bold text-white truncate max-w-[120px]">...</span>
+                </div>
+                <span class="text-[10px] text-gray-600 font-mono">ENCRYPTED</span>
             </div>
-            <div class="term-card">
-                <div class="term-header flex justify-between items-center">
-                    <span>> KNOWN_CREWS</span>
-                    <button onclick="openCreateClubModal()" class="text-xs text-neon-red hover:underline hover:text-white">[ + NEW ]</button>
+
+            <!-- CREW DIRECTORY -->
+            <div class="onion-box min-h-[300px]">
+                <div class="bg-[#111] p-2 border-b border-[#333] flex justify-between items-center">
+                    <span class="text-xs text-gray-400 font-bold">/// CREW_LIST</span>
+                    <button onclick="openCreateClubModal()" class="text-[10px] text-term-green hover:underline hover:text-white">[ + NEW ]</button>
                 </div>
-                <div id="club-list" class="flex flex-col">
-                    <div class="p-4 text-center text-zinc-600 text-sm">SCANNING...</div>
+                <div id="club-list" class="flex flex-col text-xs">
+                    <div class="p-2 text-center text-gray-600">Scanning network...</div>
                 </div>
+            </div>
+
+            <div class="text-[10px] text-gray-700 text-center font-mono">
+                SR_NET v3.1.4 <br> DO NOT LEAK IP
             </div>
         </aside>
 
-        <!-- TENGAH: FEED -->
-        <main class="lg:col-span-2 space-y-4 pb-20">
-            <div class="term-card p-4">
-                <div class="flex gap-2 mb-2 text-zinc-500 text-sm"><span>> BROADCAST_MESSAGE</span><span class="animate-pulse-fast">_</span></div>
-                <textarea id="post-content" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500" rows="2" placeholder="Write encrypted message..."></textarea>
-                <div id="img-input-area" class="hidden mt-2 border-l-2 border-zinc-800 pl-2">
-                    <input type="text" id="post-img-url" class="w-full bg-black border border-zinc-800 text-white p-1 text-sm" placeholder="Image URL (https://...)">
+        <!-- CENTER: FEED -->
+        <main class="md:col-span-2 space-y-4">
+            
+            <!-- ALERT BANNER -->
+            <div class="bg-red-900/10 border border-red-900/30 p-2 text-[10px] text-red-700 text-center uppercase tracking-widest font-bold">
+                *** secure connection established ***
+            </div>
+
+            <!-- INPUT TERMINAL -->
+            <div class="onion-box p-3 relative group focus-within:border-term-green transition-colors">
+                <div class="text-xs text-gray-500 mb-2 font-mono">> compose_message...</div>
+                <textarea id="post-content" class="w-full h-20 bg-black border border-[#333] p-2 text-sm text-gray-300 focus:border-term-green focus:text-term-green outline-none font-mono resize-none placeholder-gray-800" placeholder="Type here..."></textarea>
+                
+                <div id="img-input-area" class="hidden mt-2 border-l-2 border-term-green pl-2">
+                    <label class="text-[10px] text-term-green block mb-1">IMAGE_URL:</label>
+                    <input type="text" id="post-img-url" class="w-full bg-[#111] border border-[#333] text-white text-xs p-1 outline-none font-mono" placeholder="https://...">
                 </div>
-                <div class="flex justify-between items-center mt-2">
-                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden')" class="text-zinc-500 hover:text-white text-sm">[ + IMG ]</button>
-                    <button id="btn-post" class="term-btn text-white border-red-900 bg-red-900/10 hover:bg-red-900">> SEND</button>
+
+                <div class="flex justify-between items-center mt-2 pt-1">
+                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden')" class="text-[10px] text-gray-500 hover:text-white flex items-center gap-1 uppercase">
+                        [ + attachment ]
+                    </button>
+                    <button id="btn-post" class="onion-btn px-4 py-1 text-xs bg-gray-900 hover:bg-term-green hover:text-black hover:border-term-green">
+                        ENTER
+                    </button>
                 </div>
             </div>
-            <div id="feed-container" class="space-y-4">
-                <div class="text-center py-8 text-zinc-600">> DECRYPTING_DATA...</div>
+
+            <!-- FEED STREAM -->
+            <div id="feed-container" class="space-y-4 pb-10">
+                <div class="text-center py-8 text-gray-600 text-xs font-mono">
+                    <span class="animate-pulse">_</span> FETCHING_DATA...
+                </div>
             </div>
+
         </main>
 
-        <!-- KANAN: WIDGET -->
-        <aside class="hidden lg:block lg:col-span-1">
-            <div class="term-card p-3">
-                <div class="text-red-500 mb-2 blink-text">>> POLICE_SCANNER</div>
-                <div class="text-zinc-400 text-sm border-b border-zinc-800 pb-2 mb-2">
-                    <span class="text-white">10-90 REPORTED</span><br>Suspicious activity near Grove Street.
+        <!-- RIGHT: INFO & BLACKLIST -->
+        <aside class="hidden md:block md:col-span-1 space-y-4">
+            
+            <!-- MARKET TICKER -->
+            <div class="onion-box p-3">
+                <div class="text-xs text-gray-500 mb-2 border-b border-[#333] pb-1 flex justify-between">
+                    <span>EXCHANGE</span>
+                    <span class="text-term-green text-[10px]">LIVE</span>
+                </div>
+                <ul class="text-xs space-y-1 font-mono">
+                    <li class="flex justify-between"><span class="text-gray-500">BTC</span> <span class="text-gray-300">98k</span></li>
+                    <li class="flex justify-between"><span class="text-gray-500">ETH</span> <span class="text-gray-300">2.8k</span></li>
+                    <li class="flex justify-between"><span class="text-gray-500">XMR</span> <span class="text-gray-300">164</span></li>
+                </ul>
+            </div>
+
+            <!-- BLACKLIST WIDGET -->
+            <div class="onion-box border-red-900/30">
+                <div class="bg-red-900/10 p-2 border-b border-red-900/30 flex justify-between items-center">
+                    <span class="text-xs text-red-500 font-bold blink-red">>> BLACKLIST</span>
+                    <i data-lucide="siren" class="w-4 h-4 text-red-700"></i>
+                </div>
+                <!-- BLACKLIST CONTENT (MANUAL ADMIN INPUT) -->
+                <div class="p-3 space-y-3">
+                    <!-- Target 1 -->
+                    <div class="border-b border-[#222] pb-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-white font-bold">GHOST_RIDER</span>
+                            <span class="text-[10px] bg-red-900 text-black px-1 font-bold">K.O.S</span>
+                        </div>
+                        <div class="text-[10px] text-gray-500">Last seen: Vinewood Hills. Snitch.</div>
+                    </div>
+                    
+                    <!-- Target 2 -->
+                    <div class="border-b border-[#222] pb-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-white font-bold">BLUE_SKYLINE</span>
+                            <span class="text-[10px] bg-yellow-700 text-black px-1 font-bold">WANTED</span>
+                        </div>
+                        <div class="text-[10px] text-gray-500">Debt: $50,000. Capture alive.</div>
+                    </div>
+
+                    <!-- Target 3 -->
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-white font-bold">UNKNOWN_COP</span>
+                            <span class="text-[10px] bg-gray-800 text-gray-400 px-1 font-bold">AVOID</span>
+                        </div>
+                        <div class="text-[10px] text-gray-500">Undercover unit. Black Buffalo.</div>
+                    </div>
+                </div>
+                <div class="bg-[#050505] p-1 text-center border-t border-[#222]">
+                    <div class="text-[9px] text-gray-700">CONTACT ADMIN TO UPDATE LIST</div>
                 </div>
             </div>
+
         </aside>
+
     </div>
 
-    <!-- MODALS -->
-    <!-- 1. DETAIL CLUB -->
-    <div id="modal-club-info" class="modal-overlay hidden">
-        <div class="term-card w-full max-w-md p-6 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
-            <div class="flex justify-between items-start mb-4 border-b border-zinc-800 pb-2">
-                <h2 id="modal-club-name" class="text-2xl text-white font-bold">CLUB</h2>
-                <button onclick="closeModals()" class="text-zinc-500 hover:text-red-500">[X]</button>
-            </div>
-            <div class="space-y-4 mb-6">
-                <div><div class="text-zinc-500 text-xs">DESCRIPTION</div><div id="modal-club-desc" class="text-zinc-300 text-sm mt-1">...</div></div>
-                <div class="flex gap-4">
-                    <div><div class="text-zinc-500 text-xs">LEADER</div><div id="modal-club-leader" class="text-white text-sm">UNKNOWN</div></div>
-                    <div><div class="text-zinc-500 text-xs">MEMBERS</div><div id="modal-club-count" class="text-white text-sm">0</div></div>
-                </div>
-                <div id="modal-club-status" class="p-2 border border-zinc-800 bg-zinc-900 text-center text-xs text-zinc-400 hidden">STATUS: NONE</div>
-            </div>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModals()" class="term-btn text-zinc-500 border-zinc-800">CANCEL</button>
-                <button id="btn-join-club" class="term-btn active">REQUEST_ACCESS</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 2. CREATE CLUB -->
+    <!-- MODALS (SAMA SEPERTI SEBELUMNYA) -->
+    <!-- CREATE CLUB -->
     <div id="modal-create-club" class="modal-overlay hidden">
-        <div class="term-card w-full max-w-md p-6">
-            <h2 class="text-xl text-white mb-4 border-b border-zinc-800 pb-2">> ESTABLISH_NEW_CREW</h2>
-            <div class="space-y-3 mb-6">
-                <div><label class="text-xs text-zinc-500">CREW_NAME</label><input type="text" id="input-crew-name" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500"></div>
-                <div><label class="text-xs text-zinc-500">MISSION</label><textarea id="input-crew-desc" class="w-full bg-black border border-zinc-800 text-white p-2 outline-none focus:border-red-500" rows="3"></textarea></div>
+        <div class="onion-box w-full max-w-md p-1 bg-black border border-term-green shadow-[0_0_30px_rgba(0,255,65,0.1)]">
+            <div class="bg-term-green/20 text-term-green border-b border-term-green px-3 py-2 text-sm font-bold flex justify-between items-center">
+                <span>> EXECUTE: CREATE_CREW</span>
+                <button onclick="closeModals()" class="hover:text-white">[X]</button>
             </div>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModals()" class="term-btn text-zinc-500 border-zinc-800">ABORT</button>
-                <button onclick="submitCreateClub()" class="term-btn active">ESTABLISH</button>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1">CREW_NAME</label>
+                    <input type="text" id="input-crew-name" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green placeholder-gray-700">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1">MISSION_STATEMENT</label>
+                    <textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green placeholder-gray-700" rows="3"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-[#222]">
+                    <button onclick="closeModals()" class="text-xs text-gray-500 hover:text-white px-3 py-1">[ CANCEL ]</button>
+                    <button onclick="submitCreateClub()" class="onion-btn text-xs px-4 py-1 text-term-green border-term-green hover:bg-term-green hover:text-black">INITIALIZE</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT UTAMA -->
+    <!-- CLUB DETAIL -->
+    <div id="modal-club-info" class="modal-overlay hidden">
+        <div class="onion-box w-full max-w-lg p-0">
+            <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
+                <div class="text-lg text-white font-bold font-mono" id="modal-club-name">CLUB_NAME</div>
+                <button onclick="closeModals()" class="text-red-500 text-xs hover:text-red-400">[ CLOSE_WINDOW ]</button>
+            </div>
+            <div class="p-6">
+                <div class="flex gap-4 mb-4">
+                    <div class="w-16 h-16 border border-[#333] bg-[#050505] flex items-center justify-center">
+                        <i data-lucide="users" class="text-gray-700 w-8 h-8"></i>
+                    </div>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex justify-between">
+                            <span class="text-xs text-gray-500">LEADER</span>
+                            <span id="modal-club-leader" class="text-sm text-term-green">...</span>
+                        </div>
+                        <div class="flex justify-between border-t border-[#222] pt-1 mt-1">
+                            <span class="text-xs text-gray-500">MEMBERS</span>
+                            <span id="modal-club-count" class="text-sm text-white">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-[#0a0a0a] p-3 border border-[#333] text-xs text-gray-400 mb-4 font-mono leading-relaxed" id="modal-club-desc">
+                    ...
+                </div>
+                
+                <div id="modal-club-status" class="hidden mb-4 text-center py-2 border border-yellow-900/50 bg-yellow-900/10 text-yellow-500 text-xs">
+                    STATUS: PENDING
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="btn-join-club" class="onion-btn px-6 py-2 text-xs border-term-green text-term-green hover:bg-term-green hover:text-black">
+                        SEND_JOIN_REQUEST
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT (DATABASE LOGIC) -->
     <script>
         lucide.createIcons();
 
-        // 1. DATA API (Gunakan yang ini agar tidak perlu edit manual)
+        // KONFIGURASI SUPABASE
         const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; 
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1450862700736413887/pScPkMGmyFiHTQpZMBB9_tGS14pgjtxQ6cyhHqq7j0aOOgwpvJVQLoIQeu8hDm4ZUNZZ'; 
@@ -161,100 +321,64 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
 
-        // 2. INIT & FIX NAMA USER
+        // --- CORE FUNCTIONS ---
+
         async function init() {
             const { data: { session } } = await supabase.auth.getSession();
-            
-            if (!session) { 
-                window.location.href = 'index.html'; 
-                return; 
-            }
+            if (!session) { window.location.href = 'index.html'; return; }
             currentUser = session.user;
 
-            // Prioritas: Ambil Nama dari Metadata User (Lebih cepat & pasti ada saat register)
-            let finalName = "UNKNOWN";
+            let finalName = "GUEST";
             if (currentUser.user_metadata && currentUser.user_metadata.ic_name) {
                 finalName = currentUser.user_metadata.ic_name;
-            } 
-            // Fallback: Ambil dari table profiles kalau metadata kosong
-            else {
+            } else {
                 const { data: profile } = await supabase.from('profiles').select('ic_name').eq('id', currentUser.id).single();
                 if(profile) finalName = profile.ic_name;
             }
-            
-            // Simpan nama agar bisa dipakai di fungsi lain
             currentUser.ic_name = finalName; 
 
-            // Tampilkan di Navbar & Sidebar
-            document.getElementById('nav-ic-name').innerText = finalName.toUpperCase();
+            // Update status bar kecil di sidebar
             document.getElementById('side-ic-name').innerText = finalName;
-
+            
             fetchFeed();
             fetchClubs();
         }
 
-        // 3. FIX LOGOUT (Paksa pindah halaman)
         window.handleLogout = async function() {
-            const btn = document.querySelector('button[onclick="handleLogout()"]');
-            btn.innerText = "DISCONNECTING...";
-            
-            // Set timer: Jika supabase signOut kelamaan (lebih dari 1 detik), paksa pindah
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
-
-            try {
-                await supabase.auth.signOut();
-                window.location.href = 'index.html';
-            } catch (err) {
-                console.log("Logout error ignored", err);
-                window.location.href = 'index.html';
-            }
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
         }
 
-        // 4. FIX POSTING FEED
         document.getElementById('btn-post').addEventListener('click', async () => {
             const content = document.getElementById('post-content').value;
             const imgUrl = document.getElementById('post-img-url').value;
             const btn = document.getElementById('btn-post');
 
-            if(!content && !imgUrl) return alert("DATA EMPTY!");
+            if(!content && !imgUrl) return;
 
-            btn.innerText = "SENDING...";
-            btn.disabled = true;
+            btn.innerText = "..."; btn.disabled = true;
 
-            // Insert ke DB
             const { error } = await supabase.from('posts').insert({
-                user_id: currentUser.id,
-                ic_name: currentUser.ic_name, // Menggunakan nama yang sudah difix di init()
-                content: content,
-                image_url: imgUrl || null
+                user_id: currentUser.id, ic_name: currentUser.ic_name, content: content, image_url: imgUrl || null
             });
 
-            if(error) {
-                alert("ERROR UPLOAD: " + error.message);
-                btn.innerText = "> SEND";
-                btn.disabled = false;
-                return;
-            }
+            if(error) { alert("ERR: " + error.message); btn.innerText = "ENTER"; btn.disabled = false; return; }
 
-            // Webhook Discord
+            // Webhook
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
                 fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-                    username: "DeepWeb", embeds: [{ title: currentUser.ic_name, description: content, color: 15158332, image: { url: imgUrl || null } }]
+                    username: "DeepWeb", embeds: [{ title: currentUser.ic_name, description: content, color: 3066993, image: { url: imgUrl || null } }]
                 })}).catch(()=>{});
             }
 
-            // Reset Form
             document.getElementById('post-content').value = '';
             document.getElementById('post-img-url').value = '';
             document.getElementById('img-input-area').classList.add('hidden');
-            btn.innerText = "> SEND";
-            btn.disabled = false;
+            btn.innerText = "ENTER"; btn.disabled = false;
             fetchFeed();
         });
 
-        // 5. LOAD FEED
+        // --- FEED RENDERER ---
         async function fetchFeed() {
             const container = document.getElementById('feed-container');
             const { data: posts, error } = await supabase.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
@@ -264,20 +388,38 @@
 
             posts.forEach(post => {
                 const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
-                // Hitung jumlah like manual dari array
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
                 
-                const imgHtml = post.image_url ? `<img src="${post.image_url}" class="mt-2 w-full border border-zinc-800 opacity-90">` : '';
+                // Image SPoiler Logic
+                let imgHtml = '';
+                if(post.image_url) {
+                    imgHtml = `
+                    <div class="mt-2 mb-1">
+                        <div class="spoiler-img-container group" onclick="this.classList.add('revealed')">
+                            <div class="spoiler-text group-hover:bg-term-green group-hover:text-black transition-colors">[ VIEW_EVIDENCE.JPG ]</div>
+                            <img src="${post.image_url}" class="real-img" loading="lazy">
+                        </div>
+                    </div>`;
+                }
 
                 const html = `
-                <div class="term-card p-3 animate-[pulse_0.2s_ease-in]">
-                    <div class="flex justify-between items-start mb-2 border-b border-zinc-900 pb-2">
-                        <div><span class="text-white font-bold text-lg">${post.ic_name}</span></div>
+                <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors">
+                    <div class="bg-[#111] px-3 py-1 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
+                        <div>
+                            <span class="text-white font-bold">usr@${post.ic_name}</span>
+                        </div>
+                        <div>#${post.id.substring(0,6)}</div>
                     </div>
-                    <div class="text-zinc-300 whitespace-pre-wrap font-sans font-normal" style="font-family: 'VT323'">${post.content}</div>
-                    ${imgHtml}
-                    <div class="mt-3 flex gap-2 border-t border-zinc-900 pt-2">
-                        <button onclick="toggleLike('${post.id}')" id="btn-like-${post.id}" class="term-btn flex-1 text-center ${isLiked ? 'active' : ''}">LIKE (${likeCount})</button>
+                    
+                    <div class="p-3">
+                        <div class="text-sm text-gray-300 font-mono whitespace-pre-wrap leading-relaxed">${post.content}</div>
+                        ${imgHtml}
+                    </div>
+
+                    <div class="px-3 py-1 border-t border-[#222] flex items-center gap-4 text-[10px] font-mono">
+                        <button onclick="toggleLike('${post.id}')" id="btn-like-${post.id}" class="hover:text-term-green flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600'}">
+                            [ VOUCH: <span class="font-bold">${likeCount}</span> ]
+                        </button>
                     </div>
                 </div>`;
                 container.insertAdjacentHTML('beforeend', html);
@@ -286,99 +428,81 @@
 
         async function toggleLike(postId) {
             const btn = document.getElementById(`btn-like-${postId}`);
-            const isLiked = btn.classList.contains('active');
-            let count = parseInt(btn.innerText.match(/\d+/)[0]);
+            let countSpan = btn.querySelector('span');
+            let count = parseInt(countSpan.innerText);
             
-            if (isLiked) {
-                btn.classList.remove('active'); btn.innerText = `LIKE (${count - 1})`;
+            if (btn.classList.contains('text-term-green')) {
+                btn.classList.remove('text-term-green'); btn.classList.add('text-gray-600');
+                countSpan.innerText = count - 1;
                 await supabase.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
             } else {
-                btn.classList.add('active'); btn.innerText = `LIKE (${count + 1})`;
+                btn.classList.add('text-term-green'); btn.classList.remove('text-gray-600');
+                countSpan.innerText = count + 1;
                 await supabase.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
             }
         }
 
-        // 6. FIX CREATE CLUB
+        // --- CLUB LIST ---
         async function fetchClubs() {
             const list = document.getElementById('club-list');
-            const { data: crews, error } = await supabase.from('crews').select('*').order('created_at', { ascending: false });
+            const { data: crews } = await supabase.from('crews').select('*').order('created_at', { ascending: false });
 
             list.innerHTML = '';
             if(!crews || crews.length === 0) {
-                list.innerHTML = '<div class="p-4 text-center text-xs text-zinc-600">NO CLUBS FOUND.</div>';
+                list.innerHTML = '<div class="p-2 text-center text-gray-800 italic text-[10px]">NO_DATA</div>';
                 return;
             }
 
             crews.forEach(crew => {
                 const item = document.createElement('div');
-                item.className = "p-3 border-b border-zinc-900 hover:bg-zinc-900 cursor-pointer transition flex justify-between items-center group";
+                item.className = "px-2 py-2 border-b border-[#222] hover:bg-[#111] cursor-pointer flex justify-between items-center group transition-colors";
                 item.innerHTML = `
-                    <div>
-                        <div class="text-white font-bold group-hover:text-red-500 text-sm">[ ${crew.name} ]</div>
-                        <div class="text-[10px] text-zinc-600 truncate w-32">${crew.description || 'No data'}</div>
+                    <div class="truncate pr-2 flex items-center gap-2">
+                        <span class="text-gray-600 group-hover:text-term-green">./</span>
+                        <div class="text-gray-300 font-bold group-hover:text-white">${crew.name}</div>
                     </div>
-                    <span class="text-zinc-700 text-xs group-hover:text-white">></span>
                 `;
                 item.onclick = () => openClubDetail(crew.id, crew.name, crew.description, crew.created_by);
                 list.appendChild(item);
             });
         }
 
+        // --- MODAL LOGIC (SAMA) ---
         async function submitCreateClub() {
             const name = document.getElementById('input-crew-name').value.trim();
             const desc = document.getElementById('input-crew-desc').value.trim();
+            if(!name) return alert("ERROR: NAME_NULL");
             
-            if(!name) return alert("NAME REQUIRED");
-
-            // 1. Create Club
-            const { data: crew, error } = await supabase.from('crews').insert({
-                name: name,
-                description: desc,
-                created_by: currentUser.id // Pastikan kolom created_by ada di SQL
-            }).select().single();
-
-            if(error) return alert("FAILED: " + error.message);
-
-            // 2. Add Self as Leader
-            await supabase.from('crew_members').insert({
-                crew_id: crew.id,
-                user_id: currentUser.id,
-                ic_name: currentUser.ic_name,
-                status: 'leader'
-            });
-
-            alert("CREW ESTABLISHED.");
-            closeModals();
-            fetchClubs();
+            const { data: crew, error } = await supabase.from('crews').insert({ name: name, description: desc, created_by: currentUser.id }).select().single();
+            if(error) return alert("DB_ERR: " + error.message);
+            
+            await supabase.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
+            alert("SUCCESS: NODE_CREATED"); closeModals(); fetchClubs();
         }
 
         async function openClubDetail(id, name, desc, creatorId) {
             document.getElementById('modal-club-info').classList.remove('hidden');
-            document.getElementById('modal-club-name').innerText = name;
-            document.getElementById('modal-club-desc').innerText = desc || "-";
+            document.getElementById('modal-club-name').innerText = "./" + name;
+            document.getElementById('modal-club-desc').innerText = desc || "NO DATA";
             
             const btnJoin = document.getElementById('btn-join-club');
-            btnJoin.disabled = false; btnJoin.innerText = "REQUEST ACCESS";
+            btnJoin.disabled = false; btnJoin.innerText = "SEND_JOIN_REQUEST";
             btnJoin.onclick = () => joinCrew(id);
 
-            // Load Leader Name
-            // Fallback sederhana jika profile leader belum ada
-            let leaderName = "UNKNOWN";
+            let leaderName = "ANONYMOUS";
             const { data: leader } = await supabase.from('profiles').select('ic_name').eq('id', creatorId).single();
             if(leader) leaderName = leader.ic_name;
             document.getElementById('modal-club-leader').innerText = leaderName;
 
-            // Load Member Count
             const { count } = await supabase.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
             document.getElementById('modal-club-count').innerText = count || 0;
 
-            // Check Status
             const { data: myStatus } = await supabase.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
             const statusEl = document.getElementById('modal-club-status');
             
             if(myStatus) {
                 btnJoin.disabled = true;
-                btnJoin.innerText = myStatus.status === 'pending' ? "PENDING" : "JOINED";
+                btnJoin.innerText = myStatus.status === 'pending' ? "PENDING..." : "ACCESS_GRANTED";
                 statusEl.innerText = "STATUS: " + myStatus.status.toUpperCase();
                 statusEl.classList.remove('hidden');
             } else {
@@ -391,7 +515,7 @@
             btn.innerText = "..."; btn.disabled = true;
             const { error } = await supabase.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
             if(error) { alert(error.message); btn.disabled = false; }
-            else { alert("REQUEST SENT"); btn.innerText = "PENDING"; }
+            else { alert("PACKET_SENT"); btn.innerText = "PENDING..."; }
         }
 
         function closeModals() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); }
