@@ -535,18 +535,26 @@
         }
 
         async function fetchClubs() {
-            const list = document.getElementById('club-list');
-            const { data: crews } = await sbClient.from('crews').select('*').order('created_at', { ascending: false });
-            list.innerHTML = '';
-            if(!crews || crews.length === 0) { list.innerHTML = '<div class="p-4 text-center text-gray-800 italic text-[10px]">NO_DATA_FOUND</div>'; return; }
-            crews.forEach(crew => {
-                const item = document.createElement('div');
-                item.className = "px-3 py-2 border-b border-[#222] hover:bg-[#111] cursor-pointer flex justify-between items-center group transition-colors";
-                item.innerHTML = `<div class="truncate pr-2 flex items-center gap-2"><span class="text-gray-600 group-hover:text-term-green">./</span><div class="text-gray-300 font-bold group-hover:text-white truncate">${crew.name}</div></div>`;
-                item.onclick = () => window.openClubDetail(crew.id, crew.name, crew.description, crew.created_by);
-                list.appendChild(item);
-            });
-        }
+    const list = document.getElementById('club-list');
+    
+    // UPDATE DI SINI: Tambahkan .eq('status', 'approved')
+    const { data: crews } = await sbClient
+        .from('crews')
+        .select('*')
+        .eq('status', 'approved') 
+        .order('created_at', { ascending: false });
+
+    list.innerHTML = '';
+    if(!crews || crews.length === 0) { 
+        list.innerHTML = '<div class="p-4 text-center text-gray-800 italic text-[10px]">NO_DATA_FOUND</div>'; 
+        return; 
+    }
+    
+    // ... sisa kode loop render crew tetap sama ...
+    crews.forEach(crew => {
+        // ... kode render html ...
+    });
+}
 
         window.submitCreateClub = async function() {
             const name = document.getElementById('input-crew-name').value.trim();
