@@ -20,6 +20,7 @@
                         'deep-black': '#050505', 
                         'term-green': '#00ff41',
                         'term-red': '#ff3333',
+                        'term-gray': '#333333'
                     },
                     animation: { 'blink': 'blink 1s steps(2) infinite' },
                     keyframes: { blink: { '0%': { opacity: '1' }, '100%': { opacity: '0' } } }
@@ -28,135 +29,175 @@
         }
     </script>
     <style>
-        body { background-color: #000; color: #ccc; font-family: 'Courier Prime', monospace; font-size: 14px; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #333; border: 1px solid #000; }
+        body { background-color: #000; color: #ccc; font-family: 'Courier Prime', monospace; font-size: 14px; overflow-x: hidden; }
         
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        
+        /* BOX STYLES */
         .onion-box { background: #080808; border: 1px solid #333; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
         .onion-btn { border: 1px solid #444; background: #111; color: #888; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
         .onion-btn:hover:not(:disabled) { background: #222; color: #fff; border-color: #666; }
         .onion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .hidden { display: none !important; }
 
-        .spoiler-img-container {
-            position: relative;
-            background: repeating-linear-gradient(45deg, #111, #111 10px, #222 10px, #222 20px);
+        /* IMAGE STYLE (OPEN) */
+        .post-image-container {
+            width: 100%;
+            margin-top: 10px;
             border: 1px solid #333;
-            min-height: 100px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; overflow: hidden;
+            background: #000;
+            position: relative;
         }
-        .spoiler-text { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 4px 8px; z-index: 10; font-weight: bold; font-size: 12px; }
-        .real-img { width: 100%; height: auto; opacity: 0; transition: opacity 0.3s; }
-        .spoiler-img-container.revealed .real-img { opacity: 1; }
-        .spoiler-img-container.revealed .spoiler-text { display: none; }
-        .spoiler-img-container.revealed { background: #000; border: 1px solid #444; }
+        .post-image-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+        .post-image-container img:hover { opacity: 1; }
 
+        /* TEXT UTILS */
         .blink-red { animation: blink 1s infinite; color: #ff3333; }
+        .wrap-text { white-space: pre-wrap; word-wrap: break-word; }
+
+        /* TOAST NOTIFICATION (RESPONSIVE) */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+        .term-toast {
+            background: #000; border-left: 4px solid #00ff41; border-top: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333;
+            color: #fff; padding: 12px 20px; min-width: 250px; max-width: 90vw;
+            font-family: 'Courier Prime', monospace; font-size: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            transform: translateX(120%); transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .term-toast.show { transform: translateX(0); }
+        .term-toast.error { border-left-color: #ff3333; }
+        
+        /* MOBILE TWEAKS */
+        @media (max-width: 640px) {
+            #toast-container { right: 5%; width: 90%; top: 10px; }
+            .term-toast { width: 100%; min-width: auto; }
+            .onion-box { margin-bottom: 10px; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
     <!-- HEADER -->
-    <header class="bg-[#1a1a1a] border-b border-[#333] p-1 flex items-center gap-2 sticky top-0 z-50 shadow-2xl">
-        <div class="flex gap-1 ml-2">
+    <header class="bg-[#1a1a1a] border-b border-[#333] p-2 flex items-center gap-2 sticky top-0 z-50 shadow-2xl">
+        <div class="flex gap-1.5 ml-1 hidden sm:flex">
             <div class="w-3 h-3 rounded-full bg-red-900/50 border border-red-700"></div>
             <div class="w-3 h-3 rounded-full bg-yellow-900/50 border border-yellow-700"></div>
             <div class="w-3 h-3 rounded-full bg-green-900/50 border border-green-700"></div>
         </div>
-        <div class="flex-1 bg-black border border-[#333] mx-2 px-2 py-1 flex items-center gap-2 text-xs rounded opacity-80">
-            <i data-lucide="lock" class="w-3 h-3 text-term-green"></i>
-            <span class="text-term-green">https://</span>
-            <span class="text-gray-500">sr-net-v3hidden.onion</span>
+        
+        <!-- Address Bar (Truncated on mobile) -->
+        <div class="flex-1 bg-black border border-[#333] mx-1 px-3 py-1.5 flex items-center gap-2 text-xs rounded opacity-90 overflow-hidden">
+            <i data-lucide="lock" class="w-3 h-3 text-term-green flex-shrink-0"></i>
+            <div class="truncate w-full flex gap-1">
+                <span class="text-term-green">https://</span>
+                <span class="text-gray-500 truncate">sr-net-v3hidden.onion/board</span>
+            </div>
         </div>
-        <div class="mr-2 cursor-pointer hover:text-white text-gray-500" onclick="window.handleLogout()">
+
+        <div class="mr-1 cursor-pointer hover:text-white text-gray-500 p-1" onclick="window.handleLogout()">
             <i data-lucide="power" class="w-4 h-4"></i>
         </div>
     </header>
 
-    <!-- LAYOUT -->
-    <div class="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-4 p-4 mt-2">
+    <!-- LAYOUT GRID -->
+    <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-4 gap-4 p-3 lg:p-4 mt-1">
         
-        <!-- SIDEBAR -->
-        <aside class="md:col-span-1 space-y-4">
-            <div class="onion-box p-2 flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 bg-term-green rounded-full animate-pulse"></div>
-                    <span id="side-ic-name" class="text-xs font-bold text-white truncate max-w-[120px]">...</span>
+        <!-- SIDEBAR (User & Menu) -->
+        <aside class="lg:col-span-1 space-y-4 order-2 lg:order-1">
+            <div class="onion-box p-3 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 bg-term-green rounded-full animate-pulse shadow-[0_0_5px_#00ff41]"></div>
+                    <div>
+                        <div class="text-[10px] text-gray-500 leading-none mb-0.5">OPERATIVE</div>
+                        <div id="side-ic-name" class="text-sm font-bold text-white truncate max-w-[150px]">LOADING...</div>
+                    </div>
                 </div>
-                <span class="text-[10px] text-gray-600 font-mono">ENCRYPTED</span>
+                <i data-lucide="shield-check" class="w-5 h-5 text-gray-700"></i>
             </div>
-            <div class="onion-box min-h-[300px]">
-                <div class="bg-[#111] p-2 border-b border-[#333] flex justify-between items-center">
-                    <span class="text-xs text-gray-400 font-bold">/// CREW_LIST</span>
-                    <button onclick="window.openCreateClubModal()" class="text-[10px] text-term-green hover:underline hover:text-white">[ + NEW ]</button>
+
+            <!-- Mobile Collapsible for Crew List to save space -->
+            <div class="onion-box">
+                <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
+                    <span class="text-xs text-gray-400 font-bold">/// CREW_DIRECTORY</span>
+                    <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ + NEW ]</button>
                 </div>
-                <div id="club-list" class="flex flex-col text-xs">
-                    <div class="p-2 text-center text-gray-600">Scanning network...</div>
+                <div id="club-list" class="flex flex-col text-xs max-h-[200px] lg:max-h-[400px] overflow-y-auto">
+                    <div class="p-4 text-center text-gray-600">Scanning network...</div>
                 </div>
             </div>
         </aside>
 
         <!-- MAIN FEED -->
-        <main class="md:col-span-2 space-y-4">
-            <div class="bg-red-900/10 border border-red-900/30 p-2 text-[10px] text-red-700 text-center uppercase tracking-widest font-bold">
-                *** secure connection established ***
+        <main class="lg:col-span-2 space-y-4 order-1 lg:order-2 pb-20">
+            <!-- Warning Banner -->
+            <div class="bg-red-900/10 border border-red-900/30 p-2 text-[10px] text-red-600 text-center uppercase tracking-widest font-bold">
+                *** Connection Encrypted (AES-256) ***
             </div>
 
             <!-- INPUT AREA -->
             <div class="onion-box p-3 relative group focus-within:border-term-green transition-colors">
                 <div class="text-xs text-gray-500 mb-2 font-mono flex justify-between">
-                    <span>> compose_message...</span>
-                    <span class="text-[10px] text-gray-700">[ ENTER TO SEND ]</span>
+                    <span>> broadcast_message</span>
+                    <span class="text-[10px] text-gray-700 hidden sm:inline">[ ANONYMOUS ]</span>
                 </div>
                 
-                <!-- TEXT AREA -->
-                <textarea id="post-content" class="w-full h-20 bg-black border border-[#333] p-2 text-sm text-gray-300 focus:border-term-green focus:text-term-green outline-none font-mono resize-none placeholder-gray-800" placeholder="Type here..."></textarea>
+                <textarea id="post-content" class="w-full h-24 bg-black border border-[#333] p-3 text-sm text-gray-300 focus:border-term-green focus:text-term-green outline-none font-mono resize-none placeholder-gray-800" placeholder="Write something..."></textarea>
                 
-                <!-- IMAGE URL INPUT -->
-                <div id="img-input-area" class="hidden mt-2 border-l-2 border-term-green pl-2 bg-[#0a0a0a] p-1">
-                    <label class="text-[10px] text-term-green block mb-1">IMAGE_LINK (JPG/PNG/GIF):</label>
-                    <input type="text" id="post-img-url" class="w-full bg-[#111] border border-[#333] text-white text-xs p-1 outline-none font-mono focus:border-white" placeholder="https://example.com/image.jpg">
-                    <div class="text-[9px] text-gray-600 mt-1">[ PRESS ENTER TO UPLOAD ]</div>
+                <div id="img-input-area" class="hidden mt-2 border-l-2 border-term-green pl-2 bg-[#0a0a0a] p-2">
+                    <label class="text-[10px] text-term-green block mb-1">IMAGE_URL (Direct Link):</label>
+                    <input type="text" id="post-img-url" class="w-full bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono focus:border-white" placeholder="https://i.imgur.com/example.jpg">
                 </div>
 
-                <div class="flex justify-between items-center mt-2 pt-1 border-t border-[#222]">
-                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden'); document.getElementById('post-img-url').focus();" class="text-[10px] text-gray-500 hover:text-white flex items-center gap-1 uppercase">
-                        <i data-lucide="image" class="w-3 h-3"></i> ATTACH_URL
+                <div class="flex justify-between items-center mt-3 pt-2 border-t border-[#222]">
+                    <button onclick="document.getElementById('img-input-area').classList.toggle('hidden'); document.getElementById('post-img-url').focus();" class="text-[10px] text-gray-500 hover:text-white flex items-center gap-1 uppercase p-1">
+                        <i data-lucide="image" class="w-4 h-4"></i> <span class="hidden sm:inline">ATTACH MEDIA</span>
                     </button>
-                    <button id="btn-post" class="onion-btn px-4 py-1 text-xs bg-gray-900 hover:bg-term-green hover:text-black hover:border-term-green">
-                        ENTER
+                    <button id="btn-post" class="onion-btn px-6 py-1.5 text-xs bg-gray-900 hover:bg-term-green hover:text-black hover:border-term-green tracking-wider">
+                        SEND_PACKET
                     </button>
                 </div>
             </div>
 
-            <!-- FEED -->
-            <div id="feed-container" class="space-y-4 pb-10">
-                <div class="text-center py-8 text-gray-600 text-xs font-mono">
-                    <span class="animate-pulse">_</span> FETCHING_DATA...
+            <!-- FEED CONTAINER -->
+            <div id="feed-container" class="space-y-4">
+                <div class="text-center py-10 text-gray-600 text-xs font-mono">
+                    <div class="animate-spin w-6 h-6 border-2 border-term-green border-t-transparent rounded-full mx-auto mb-2"></div>
+                    DECRYPTING FEED...
                 </div>
             </div>
         </main>
 
-        <!-- RIGHT WIDGETS -->
-        <aside class="hidden md:block md:col-span-1 space-y-4">
+        <!-- RIGHT WIDGETS (Hidden on mobile to save space, or moved to bottom) -->
+        <aside class="hidden lg:block lg:col-span-1 space-y-4 order-3">
             <div class="onion-box p-3">
                 <div class="text-xs text-gray-500 mb-2 border-b border-[#333] pb-1 flex justify-between">
-                    <span>EXCHANGE</span><span class="text-term-green text-[10px]">LIVE</span>
+                    <span>CRYPTO_MARKET</span><span class="text-term-green text-[10px] animate-pulse">● LIVE</span>
                 </div>
-                <ul class="text-xs space-y-1 font-mono">
-                    <li class="flex justify-between"><span class="text-gray-500">BTC</span> <span class="text-gray-300">98k</span></li>
-                    <li class="flex justify-between"><span class="text-gray-500">ETH</span> <span class="text-gray-300">2.8k</span></li>
+                <ul class="text-xs space-y-2 font-mono">
+                    <li class="flex justify-between"><span class="text-gray-500">BTC</span> <span class="text-gray-300 font-bold">$98,420</span></li>
+                    <li class="flex justify-between"><span class="text-gray-500">ETH</span> <span class="text-gray-300 font-bold">$2,850</span></li>
+                    <li class="flex justify-between"><span class="text-gray-500">XMR</span> <span class="text-gray-300 font-bold">$165</span></li>
                 </ul>
             </div>
 
-            <!-- BLACKLIST -->
             <div class="onion-box border-red-900/30">
                 <div class="bg-red-900/10 p-2 border-b border-red-900/30 flex justify-between items-center">
-                    <span class="text-xs text-red-500 font-bold blink-red">>> BLACKLIST</span>
+                    <span class="text-xs text-red-500 font-bold blink-red">>> MOST_WANTED</span>
                     <i data-lucide="siren" class="w-4 h-4 text-red-700"></i>
                 </div>
                 <div class="p-3 space-y-3">
@@ -165,64 +206,64 @@
                             <span class="text-white font-bold">GHOST_RIDER</span>
                             <span class="text-[10px] bg-red-900 text-black px-1 font-bold">K.O.S</span>
                         </div>
-                        <div class="text-[10px] text-gray-500">Last seen: Vinewood Hills.</div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="text-white font-bold">UNKNOWN_COP</span>
-                            <span class="text-[10px] bg-gray-800 text-gray-400 px-1 font-bold">AVOID</span>
-                        </div>
-                        <div class="text-[10px] text-gray-500">Undercover. Black Buffalo.</div>
+                        <div class="text-[10px] text-gray-500">Vinewood Hills area.</div>
                     </div>
                 </div>
             </div>
         </aside>
     </div>
 
-    <!-- MODALS -->
+    <!-- MODALS (RESPONSIVE) -->
+    <!-- CREATE CLUB -->
     <div id="modal-create-club" class="modal-overlay hidden">
-        <div class="onion-box w-full max-w-md p-1 bg-black border border-term-green shadow-[0_0_30px_rgba(0,255,65,0.1)]">
+        <div class="onion-box w-[95%] max-w-md p-1 bg-black border border-term-green shadow-[0_0_50px_rgba(0,255,65,0.15)]">
             <div class="bg-term-green/20 text-term-green border-b border-term-green px-3 py-2 text-sm font-bold flex justify-between items-center">
                 <span>> EXECUTE: CREATE_CREW</span>
-                <button onclick="window.closeModals()" class="hover:text-white">[X]</button>
+                <button onclick="window.closeModals()" class="hover:text-white p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-4 space-y-4">
-                <div><label class="block text-[10px] text-gray-500 mb-1">CREW_NAME</label><input type="text" id="input-crew-name" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green"></div>
-                <div><label class="block text-[10px] text-gray-500 mb-1">MISSION_STATEMENT</label><textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green" rows="3"></textarea></div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1">CREW_NAME</label>
+                    <input type="text" id="input-crew-name" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green focus:bg-black transition">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1">MISSION_STATEMENT</label>
+                    <textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green focus:bg-black transition" rows="3"></textarea>
+                </div>
                 <div class="flex justify-end gap-2 pt-2 border-t border-[#222]">
-                    <button onclick="window.closeModals()" class="text-xs text-gray-500 hover:text-white px-3 py-1">[ CANCEL ]</button>
-                    <button onclick="window.submitCreateClub()" class="onion-btn text-xs px-4 py-1 text-term-green border-term-green hover:bg-term-green hover:text-black">INITIALIZE</button>
+                    <button onclick="window.closeModals()" class="text-xs text-gray-500 hover:text-white px-3 py-2">[ ABORT ]</button>
+                    <button onclick="window.submitCreateClub()" class="onion-btn text-xs px-4 py-2 text-term-green border-term-green hover:bg-term-green hover:text-black">INITIALIZE</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- CLUB INFO -->
     <div id="modal-club-info" class="modal-overlay hidden">
-        <div class="onion-box w-full max-w-lg p-0">
+        <div class="onion-box w-[95%] max-w-lg p-0">
             <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
-                <div class="text-lg text-white font-bold font-mono" id="modal-club-name">CLUB_NAME</div>
-                <button onclick="window.closeModals()" class="text-red-500 text-xs hover:text-red-400">[ CLOSE ]</button>
+                <div class="text-base text-white font-bold font-mono truncate mr-2" id="modal-club-name">CLUB_NAME</div>
+                <button onclick="window.closeModals()" class="text-red-500 text-xs hover:text-red-400 border border-red-900/30 px-2 py-1">[ CLOSE ]</button>
             </div>
-            <div class="p-6">
+            <div class="p-5">
                 <div class="flex gap-4 mb-4">
-                    <div class="w-16 h-16 border border-[#333] bg-[#050505] flex items-center justify-center"><i data-lucide="users" class="text-gray-700 w-8 h-8"></i></div>
-                    <div class="flex-1 space-y-1">
-                        <div class="flex justify-between"><span class="text-xs text-gray-500">LEADER</span><span id="modal-club-leader" class="text-sm text-term-green">...</span></div>
+                    <div class="w-16 h-16 border border-[#333] bg-[#050505] flex items-center justify-center flex-shrink-0"><i data-lucide="users" class="text-gray-700 w-8 h-8"></i></div>
+                    <div class="flex-1 space-y-1 min-w-0">
+                        <div class="flex justify-between"><span class="text-xs text-gray-500">LEADER</span><span id="modal-club-leader" class="text-sm text-term-green truncate ml-2">...</span></div>
                         <div class="flex justify-between border-t border-[#222] pt-1 mt-1"><span class="text-xs text-gray-500">MEMBERS</span><span id="modal-club-count" class="text-sm text-white">0</span></div>
                     </div>
                 </div>
-                <div class="bg-[#0a0a0a] p-3 border border-[#333] text-xs text-gray-400 mb-4 font-mono leading-relaxed" id="modal-club-desc">...</div>
+                <div class="bg-[#0a0a0a] p-3 border border-[#333] text-xs text-gray-400 mb-4 font-mono leading-relaxed wrap-text max-h-40 overflow-y-auto" id="modal-club-desc">...</div>
                 <div id="modal-club-status" class="hidden mb-4 text-center py-2 border border-yellow-900/50 bg-yellow-900/10 text-yellow-500 text-xs">STATUS: PENDING</div>
                 <div class="flex justify-end">
-                    <button id="btn-join-club" class="onion-btn px-6 py-2 text-xs border-term-green text-term-green hover:bg-term-green hover:text-black">SEND_JOIN_REQUEST</button>
+                    <button id="btn-join-club" class="onion-btn px-4 py-2 text-xs border-term-green text-term-green hover:bg-term-green hover:text-black w-full sm:w-auto">SEND_JOIN_REQUEST</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT UTAMA -->
+    <!-- SCRIPT -->
     <script>
-        // Init Icon
         if(typeof lucide !== 'undefined') lucide.createIcons();
 
         // 1. CONFIG
@@ -230,22 +271,26 @@
         const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; 
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1450862700736413887/pScPkMGmyFiHTQpZMBB9_tGS14pgjtxQ6cyhHqq7j0aOOgwpvJVQLoIQeu8hDm4ZUNZZ'; 
 
-        // 2. INISIALISASI DB - Menggunakan nama 'sbClient' untuk menghindari konflik nama variable 'supabase'
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
 
-        // 3. MAIN INIT FUNCTION
+        // TOAST NOTIFICATION
+        window.showToast = function(title, message, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `term-toast ${isError ? 'error' : ''}`;
+            toast.innerHTML = `<span class="term-toast-title">>> ${title}</span>${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3500);
+        }
+
+        // 2. INIT
         async function init() {
-            // Cek Session
-            const { data: { session }, error } = await sbClient.auth.getSession();
-            
-            if (!session) { 
-                window.location.href = 'index.html'; 
-                return; 
-            }
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (!session) { window.location.href = 'index.html'; return; }
             currentUser = session.user;
 
-            // Ambil Nama Karakter
             let finalName = "GUEST";
             if (currentUser.user_metadata && currentUser.user_metadata.ic_name) {
                 finalName = currentUser.user_metadata.ic_name;
@@ -254,133 +299,138 @@
                 if(profile) finalName = profile.ic_name;
             }
             currentUser.ic_name = finalName; 
-
-            // Update UI
             document.getElementById('side-ic-name').innerText = finalName;
-            
             fetchFeed();
             fetchClubs();
         }
 
-        // 4. ATTACH FUNCTIONS TO WINDOW (Fixes "is not a function")
+        // 3. ACTIONS
         window.handleLogout = async function() {
-            await sbClient.auth.signOut();
-            window.location.href = 'index.html';
+            window.showToast("SYSTEM", "DISCONNECTING...", true);
+            setTimeout(async () => { await sbClient.auth.signOut(); window.location.href = 'index.html'; }, 1000);
         }
 
-        window.openCreateClubModal = function() {
-            document.getElementById('modal-create-club').classList.remove('hidden');
-        }
+        window.openCreateClubModal = function() { document.getElementById('modal-create-club').classList.remove('hidden'); }
+        window.closeModals = function() { document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); }
 
-        window.closeModals = function() {
-            document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
-        }
-
-        // 5. POSTING LOGIC (With Enter Key Fix)
+        // 4. POSTING
         window.submitPost = async function() {
             const contentInput = document.getElementById('post-content');
             const imgInput = document.getElementById('post-img-url');
             const btn = document.getElementById('btn-post');
-
             const content = contentInput.value;
             const imgUrl = imgInput.value;
 
-            // Validasi kosong
-            if(!content.trim() && !imgUrl.trim()) {
-                contentInput.focus();
-                return; 
-            }
+            if(!content.trim() && !imgUrl.trim()) return;
 
-            btn.innerText = "SENDING..."; 
-            btn.disabled = true;
+            btn.innerText = "SENDING..."; btn.disabled = true;
 
             const { error } = await sbClient.from('posts').insert({
                 user_id: currentUser.id, 
-                ic_name: currentUser.ic_name, 
+                ic_name: "ANONYMOUS", 
                 content: content, 
                 image_url: imgUrl || null
             });
 
             if(error) { 
-                alert("UPLOAD FAILED: " + error.message); 
-                btn.innerText = "ENTER"; 
-                btn.disabled = false; 
-                return; 
+                window.showToast("ERROR", error.message, true);
+                btn.innerText = "SEND_PACKET"; btn.disabled = false; return; 
             }
 
-            // Webhook
             if(DISCORD_WEBHOOK && DISCORD_WEBHOOK.startsWith('http')) {
                 fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-                    username: "DeepWeb", embeds: [{ title: currentUser.ic_name, description: content, color: 3066993, image: { url: imgUrl || null } }]
+                    username: "TOR_NODE",
+                    avatar_url: "https://i.imgur.com/4M34hi2.png",
+                    embeds: [{ 
+                        title: "INCOMING_PACKET", 
+                        description: `\`\`\`${content}\`\`\``, 
+                        color: 0, 
+                        image: { url: imgUrl || null },
+                        footer: { text: "ENCRYPTED_RELAY" }
+                    }]
                 })}).catch(()=>{});
             }
 
-            // Reset Form
-            contentInput.value = '';
-            imgInput.value = '';
+            contentInput.value = ''; imgInput.value = '';
             document.getElementById('img-input-area').classList.add('hidden');
-            btn.innerText = "ENTER"; 
-            btn.disabled = false;
-            
+            btn.innerText = "SEND_PACKET"; btn.disabled = false;
+            window.showToast("SUCCESS", "DATA UPLOADED");
             fetchFeed();
         }
 
-        // 6. EVENT LISTENERS
+        window.submitComment = async function(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const content = input.value.trim();
+            if(!content) return;
+            const { error } = await sbClient.from('comments').insert({ post_id: postId, user_id: currentUser.id, ic_name: "ANONYMOUS", content: content });
+            if(error) { window.showToast("ERROR", "COMMENT FAILED", true); } 
+            else { input.value = ''; fetchFeed(); window.showToast("SENT", "REPLY ADDED"); }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            // Button Click
             document.getElementById('btn-post').addEventListener('click', window.submitPost);
-
-            // Textarea Enter (Shift+Enter = New line, Enter = Submit)
-            document.getElementById('post-content').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault(); 
-                    window.submitPost();
-                }
-            });
-
-            // Image Input Enter
-            document.getElementById('post-img-url').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    window.submitPost();
-                }
-            });
-
-            // Jalankan init
+            document.getElementById('post-content').addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.submitPost(); } });
+            document.getElementById('post-img-url').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.submitPost(); } });
             init();
         });
 
-        // 7. FEED & CLUBS LOGIC
+        // 5. FEED (UPDATED: IMAGE DIRECT SHOW)
         async function fetchFeed() {
             const container = document.getElementById('feed-container');
-            const { data: posts, error } = await sbClient.from('posts').select('*, post_likes(user_id)').order('created_at', { ascending: false }).limit(20);
+            const { data: posts, error } = await sbClient.from('posts').select('*, post_likes(user_id), comments(*)').order('created_at', { ascending: false }).limit(20);
             
-            if (error) { console.error("Feed Error", error); return; }
+            if (error) return; 
             container.innerHTML = '';
             
             posts.forEach(post => {
                 const isLiked = post.post_likes && post.post_likes.some(l => l.user_id === currentUser.id);
                 const likeCount = post.post_likes ? post.post_likes.length : 0; 
+                const comments = post.comments ? post.comments.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)) : [];
                 
+                // IMAGE LOGIC: DIRECT SHOW
                 let imgHtml = '';
                 if(post.image_url) {
-                    imgHtml = `<div class="mt-2 mb-1"><div class="spoiler-img-container group" onclick="this.classList.add('revealed')"><div class="spoiler-text group-hover:bg-term-green group-hover:text-black transition-colors">[ VIEW_EVIDENCE.JPG ]</div><img src="${post.image_url}" class="real-img" loading="lazy"></div></div>`;
+                    imgHtml = `
+                    <div class="post-image-container">
+                        <img src="${post.image_url}" alt="ATTACHMENT" loading="lazy">
+                    </div>`;
+                }
+
+                let commentsHtml = '';
+                if(comments.length > 0) {
+                    commentsHtml = `<div class="mt-3 pt-2 border-t border-[#222] space-y-2">`;
+                    comments.forEach(c => { commentsHtml += `<div class="text-[11px] text-gray-400 font-mono wrap-text"><span class="text-term-green font-bold"><</span> ${c.content}</div>`; });
+                    commentsHtml += `</div>`;
                 }
 
                 const html = `
                 <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors animate-[pulse_0.2s_ease-out]">
-                    <div class="bg-[#111] px-3 py-1 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
+                    <div class="bg-[#111] px-3 py-1.5 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
                         <div><span class="text-white font-bold">usr@${post.ic_name}</span></div>
-                        <div>#${post.id.substring(0,6)}</div>
+                        <div class="text-[9px]">ID:${post.id.substring(0,6)}</div>
                     </div>
-                    <div class="p-3">
-                        <div class="text-sm text-gray-300 font-mono whitespace-pre-wrap leading-relaxed">${post.content}</div>
+                    <div class="p-4">
+                        <div class="text-sm text-gray-300 font-mono wrap-text leading-relaxed">${post.content}</div>
                         ${imgHtml}
                     </div>
-                    <div class="px-3 py-1 border-t border-[#222] flex items-center gap-4 text-[10px] font-mono">
-                        <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="hover:text-term-green flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600'}">
-                            [ VOUCH: <span class="font-bold">${likeCount}</span> ]
-                        </button>
+                    
+                    <div class="px-3 py-1.5 border-t border-[#222] flex items-center justify-between text-[10px] font-mono bg-[#0a0a0a]">
+                        <div class="flex gap-4">
+                            <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="hover:text-term-green flex items-center gap-1.5 p-1 ${isLiked ? 'text-term-green' : 'text-gray-600'}">
+                                [ VOUCH: <span class="font-bold">${likeCount}</span> ]
+                            </button>
+                            <button onclick="document.getElementById('comment-box-${post.id}').classList.toggle('hidden')" class="hover:text-white text-gray-600 p-1">
+                                [ REPLY ]
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="px-3 pb-3 bg-[#0a0a0a]">
+                        ${commentsHtml}
+                        <div id="comment-box-${post.id}" class="hidden mt-2 flex gap-2">
+                            <input type="text" id="comment-input-${post.id}" class="flex-1 bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono" placeholder="Write reply..." onkeydown="if(event.key === 'Enter') window.submitComment('${post.id}')">
+                            <button onclick="window.submitComment('${post.id}')" class="text-[10px] bg-[#222] px-3 text-gray-400 hover:text-white hover:bg-term-green hover:text-black transition">SEND</button>
+                        </div>
                     </div>
                 </div>`;
                 container.insertAdjacentHTML('beforeend', html);
@@ -407,11 +457,11 @@
             const list = document.getElementById('club-list');
             const { data: crews } = await sbClient.from('crews').select('*').order('created_at', { ascending: false });
             list.innerHTML = '';
-            if(!crews || crews.length === 0) { list.innerHTML = '<div class="p-2 text-center text-gray-800 italic text-[10px]">NO_DATA</div>'; return; }
+            if(!crews || crews.length === 0) { list.innerHTML = '<div class="p-4 text-center text-gray-800 italic text-[10px]">NO_DATA_FOUND</div>'; return; }
             crews.forEach(crew => {
                 const item = document.createElement('div');
-                item.className = "px-2 py-2 border-b border-[#222] hover:bg-[#111] cursor-pointer flex justify-between items-center group transition-colors";
-                item.innerHTML = `<div class="truncate pr-2 flex items-center gap-2"><span class="text-gray-600 group-hover:text-term-green">./</span><div class="text-gray-300 font-bold group-hover:text-white">${crew.name}</div></div>`;
+                item.className = "px-3 py-2 border-b border-[#222] hover:bg-[#111] cursor-pointer flex justify-between items-center group transition-colors";
+                item.innerHTML = `<div class="truncate pr-2 flex items-center gap-2"><span class="text-gray-600 group-hover:text-term-green">./</span><div class="text-gray-300 font-bold group-hover:text-white truncate">${crew.name}</div></div>`;
                 item.onclick = () => window.openClubDetail(crew.id, crew.name, crew.description, crew.created_by);
                 list.appendChild(item);
             });
@@ -420,11 +470,11 @@
         window.submitCreateClub = async function() {
             const name = document.getElementById('input-crew-name').value.trim();
             const desc = document.getElementById('input-crew-desc').value.trim();
-            if(!name) return alert("ERROR: NAME_NULL");
+            if(!name) return window.showToast("ERROR", "NAME REQUIRED", true);
             const { data: crew, error } = await sbClient.from('crews').insert({ name: name, description: desc, created_by: currentUser.id }).select().single();
-            if(error) return alert("DB_ERR: " + error.message);
+            if(error) return window.showToast("DB ERROR", error.message, true);
             await sbClient.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
-            alert("SUCCESS: NODE_CREATED"); window.closeModals(); fetchClubs();
+            window.showToast("SYSTEM", "NEW NODE CREATED"); window.closeModals(); fetchClubs();
         }
 
         window.openClubDetail = async function(id, name, desc, creatorId) {
@@ -454,8 +504,8 @@
             const btn = document.getElementById('btn-join-club');
             btn.innerText = "..."; btn.disabled = true;
             const { error } = await sbClient.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
-            if(error) { alert(error.message); btn.disabled = false; }
-            else { alert("PACKET_SENT"); btn.innerText = "PENDING..."; }
+            if(error) { window.showToast("ERROR", error.message, true); btn.disabled = false; }
+            else { window.showToast("SENT", "PACKET DELIVERED"); btn.innerText = "PENDING..."; }
         }
     </script>
 </body>
