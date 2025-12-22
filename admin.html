@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SR // ROOT_ACCESS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['"Courier Prime"', 'monospace'] },
+                    colors: { 
+                        'deep-black': '#050505', 
+                        'term-red': '#ff3333', 
+                        'term-gray': '#333333' 
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #000; color: #ff3333; font-family: 'Courier Prime', monospace; }
+        .onion-box { background: #080808; border: 1px solid #333; }
+        .onion-btn { border: 1px solid #ff3333; background: #111; color: #ff3333; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .onion-btn:hover { background: #ff3333; color: #000; }
+    </style>
+</head>
+<body class="min-h-screen p-4 flex flex-col items-center">
+
+    <!-- HEADER -->
+    <div class="w-full max-w-4xl border-b border-term-red pb-2 mb-6 flex justify-between items-center">
+        <h1 class="text-xl font-bold tracking-widest">/// ROOT_ADMIN_PANEL</h1>
+        <button onclick="window.location.href='dashboard.html'" class="text-xs hover:text-white">[ EXIT_TO_BOARD ]</button>
+    </div>
+
+    <!-- PENDING LIST -->
+    <div class="w-full max-w-4xl space-y-4">
+        <div class="text-xs text-gray-500 mb-2">>> INCOMING_REQUESTS (PENDING APPROVAL)</div>
+        
+        <div id="pending-list" class="space-y-2">
+            <div class="text-center py-10 text-gray-600">SCANNING DATABASE...</div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // CONFIG (SAMA DENGAN DASHBOARD)
+        const SUPABASE_URL = 'https://zgnfpqqvacixawymldnb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_6NbWkN7jwYH5fpBggGQisQ_7HXDHrNi'; 
+        const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function init() {
+            // Cek Login
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (!session) { window.location.href = 'index.html'; return; }
+            
+            // Opsional: Cek apakah email user adalah admin (Contoh sederhana)
+            // const userEmail = session.user.email;
+            // if(userEmail !== 'admin@sr.net') { alert("ACCESS DENIED"); window.location.href='dashboard.html'; }
+
+            fetchPendingCrews();
+        }
+
+        async function fetchPendingCrews() {
+            const list = document.getElementById('pending-list');
+            
+            // Ambil club yang statusnya 'pending'
+            const { data: crews, error } = await sbClient
+                .from('crews')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+
+            if(error) return alert("DB ERROR");
+
+            list.innerHTML = '';
+            if(crews.length === 0) {
+                list.innerHTML = '<div class="onion-box p-4 text-center text-gray-600 text-sm">NO PENDING REQUESTS.</div>';
+                return;
+            }
+
+            crews.forEach(crew => {
+                const item = document.createElement('div');
+                item.className = "onion-box p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4";
+                item.innerHTML = `
+                    <div>
+                        <div class="text-lg font-bold text-white">[ ${crew.name} ]</div>
+                        <div class="text-xs text-gray-500 mt-1 max-w-md">${crew.description}</div>
+                        <div class="text-[10px] text-gray-600 mt-2">ID: ${crew.id}</div>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="rejectCrew('${crew.id}')" class="flex-1 sm:flex-none border border-red-900 text-red-700 hover:bg-red-900 hover:text-white px-4 py-2 text-xs font-bold transition">[ DENY ]</button>
+                        <button onclick="approveCrew('${crew.id}')" class="flex-1 sm:flex-none bg-term-red text-black hover:bg-white px-4 py-2 text-xs font-bold transition">[ ACC ]</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function approveCrew(id) {
+            if(!confirm("AUTHORIZE THIS NODE?")) return;
+            
+            const { error } = await sbClient
+                .from('crews')
+                .update({ status: 'approved' })
+                .eq('id', id);
+
+            if(error) alert("ERROR: " + error.message);
+            else fetchPendingCrews();
+        }
+
+        async function rejectCrew(id) {
+            if(!confirm("PURGE THIS REQUEST PERMANENTLY?")) return;
+
+            // Hapus request dari database (atau bisa update status='rejected' jika ingin arsip)
+            const { error } = await sbClient
+                .from('crews')
+                .delete()
+                .eq('id', id);
+
+            if(error) alert("ERROR: " + error.message);
+            else fetchPendingCrews();
+        }
+
+        init();
+    </script>
+</body>
+</html>
