@@ -221,9 +221,11 @@
         const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         let currentUser = null;
         let activeReplyId = null; 
+        let pendingDelete = null;
         
-        // GLOBAL DELETE STATE
-        let pendingDelete = null; // { type: 'post'|'comment', id: '...' }
+        // --- NEW: STATE MANAGEMENT FOR OPEN COMMENTS ---
+        // Kita gunakan Set untuk menyimpan ID Post yang komentarnya sedang terbuka
+        let openCommentSections = new Set(); 
 
         // TOAST NOTIFICATION
         window.showToast = function(title, message, isError = false) {
@@ -264,10 +266,10 @@
         
         window.closeModals = function() { 
             document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden')); 
-            pendingDelete = null; // Reset delete state agar aman
+            pendingDelete = null; 
         }
 
-        // --- FIXED DELETE LOGIC ---
+        // --- DELETE LOGIC ---
         window.confirmDeletePost = function(postId) {
             pendingDelete = { type: 'post', id: postId };
             document.getElementById('modal-confirm').classList.remove('hidden');
@@ -281,10 +283,8 @@
         window.executeDelete = async function() {
             if (!pendingDelete) return;
             
-            // SIMPAN DATA SEMENTARA sebelum di-null-kan oleh closeModals
             const itemToDelete = { ...pendingDelete };
-            
-            window.closeModals(); // Tutup modal dulu
+            window.closeModals(); 
             
             if (itemToDelete.type === 'post') {
                 const { error } = await sbClient.from('posts').delete().eq('id', itemToDelete.id).eq('user_id', currentUser.id);
@@ -297,7 +297,6 @@
                 else { window.showToast("SYSTEM", "NODE PRUNED"); fetchFeed(); }
             }
         }
-        // ------------------------
 
         // 4. POST & COMMENT LOGIC
         window.submitPost = async function() {
@@ -336,14 +335,19 @@
 
         window.initReply = function(postId, commentId, username) {
             activeReplyId = commentId;
+            
+            // PASTIKAN KOLOM KOMENTAR TERBUKA & TERCATAT DI STATE
+            openCommentSections.add(postId);
+            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
+            const section = document.getElementById(`comment-section-${postId}`);
+            if(section) section.classList.remove('hidden');
+
+            // Render ulang indikator reply
             const indicator = document.getElementById(`reply-indicator-${postId}`);
             if(indicator) {
                 indicator.innerHTML = `<span class="text-term-green animate-pulse">>> Replying to ${username || 'ANONYMOUS'}</span> <button onclick="window.cancelReply('${postId}')" class="text-red-500 hover:text-white ml-2 text-[10px]">[CANCEL]</button>`;
                 indicator.classList.remove('hidden');
             }
-            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
-            const section = document.getElementById(`comment-section-${postId}`);
-            if(section) section.classList.remove('hidden');
 
             const input = document.getElementById(`comment-input-${postId}`);
             input.focus();
@@ -375,16 +379,28 @@
             } else { 
                 input.value = ''; 
                 window.cancelReply(postId); 
-                fetchFeed(); 
+                fetchFeed(); // State 'openCommentSections' akan menjaga kolom tetap terbuka
                 window.showToast("SENT", "REPLY ADDED"); 
             }
         }
 
+        // --- TOGGLE LOGIC WITH STATE TRACKING ---
         window.toggleComments = function(postId) {
             const box = document.getElementById(`comment-box-${postId}`);
             const section = document.getElementById(`comment-section-${postId}`);
-            box.classList.toggle('hidden');
-            if(section) section.classList.toggle('hidden');
+            
+            // Cek apakah sedang terbuka berdasarkan Set
+            if (openCommentSections.has(postId)) {
+                // Sedang terbuka -> Tutup dan hapus dari Set
+                openCommentSections.delete(postId);
+                box.classList.add('hidden');
+                if(section) section.classList.add('hidden');
+            } else {
+                // Sedang tertutup -> Buka dan tambah ke Set
+                openCommentSections.add(postId);
+                box.classList.remove('hidden');
+                if(section) section.classList.remove('hidden');
+            }
         }
 
         // 5. FEED RENDERER
@@ -403,13 +419,16 @@
                 const allComments = post.comments || [];
                 const rootComments = allComments.filter(c => !c.parent_id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                 
+                // CEK STATUS APAKAH KOLOM KOMENTAR HARUS TERBUKA (PERSISTENT STATE)
+                const isCommentOpen = openCommentSections.has(post.id);
+                const hiddenClass = isCommentOpen ? '' : 'hidden'; // Jika ada di Set, jangan pakai class 'hidden'
+
                 // RECURSIVE RENDERER
                 const renderComment = (comment, level = 0) => {
                     const children = allComments.filter(c => c.parent_id === comment.id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                     const indent = level * 12; 
                     const isCommentOwner = comment.user_id === currentUser.id;
 
-                    // Buttons
                     const deleteBtn = isCommentOwner ? 
                         `<button onclick="window.confirmDeleteComment('${comment.id}')" class="text-term-red hover:text-white text-[9px] font-bold uppercase">[DEL]</button>` : '';
 
@@ -418,14 +437,11 @@
                     let html = `
                     <div style="padding-left: ${indent}px" class="mt-3 w-full">
                         <div class="border-l-2 border-[#222] pl-3 flex flex-col items-start w-full hover:border-term-green transition-colors duration-200">
-                            <!-- Content Wrapper -->
                             <div class="text-left w-full break-all text-xs text-gray-300 font-mono leading-relaxed">
                                 <span class="text-term-green font-bold text-[11px] tracking-wide">ANONYMOUS</span>
                                 <span class="mx-1 text-gray-600">:</span>
                                 <span>${comment.content}</span>
                             </div>
-                            
-                            <!-- Actions -->
                             <div class="flex items-center gap-3 mt-1.5 select-none">
                                 ${replyBtn}
                                 ${deleteBtn}
@@ -439,18 +455,17 @@
 
                 let commentsHtml = '';
                 if(rootComments.length > 0) {
-                    commentsHtml = `<div id="comment-section-${post.id}" class="hidden mt-3 pt-2 border-t border-[#222] w-full">`;
+                    // Gunakan hiddenClass hasil pengecekan State
+                    commentsHtml = `<div id="comment-section-${post.id}" class="${hiddenClass} mt-3 pt-2 border-t border-[#222] w-full">`;
                     rootComments.forEach(root => { commentsHtml += renderComment(root); });
                     commentsHtml += `</div>`;
                 }
 
-                // IMAGE
                 let imgHtml = '';
                 if(post.image_url) {
                     imgHtml = `<div class="post-image-container"><img src="${post.image_url}" alt="ATTACHMENT" loading="lazy"></div>`;
                 }
 
-                // DELETE POST BUTTON
                 let deleteHtml = '';
                 if(isOwner) {
                     deleteHtml = `<button onclick="window.confirmDeletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
@@ -458,7 +473,6 @@
 
                 const html = `
                 <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors animate-[pulse_0.2s_ease-out]">
-                    <!-- Header -->
                     <div class="bg-[#111] px-3 py-1.5 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
                         <div><span class="text-white font-bold">ANONYMOUS</span></div>
                         <div class="flex items-center gap-2">
@@ -467,13 +481,11 @@
                         </div>
                     </div>
                     
-                    <!-- Content -->
                     <div class="p-4">
                         <div class="text-sm text-gray-300 font-mono wrap-text leading-relaxed text-left w-full">${post.content}</div>
                         ${imgHtml}
                     </div>
                     
-                    <!-- Actions -->
                     <div class="px-3 py-2 border-t border-[#222] flex items-center justify-between bg-[#0a0a0a]">
                         <div class="flex gap-4">
                             <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600 hover:text-white'} transition">
@@ -487,10 +499,10 @@
                         </div>
                     </div>
 
-                    <!-- Hidden Comment Box -->
                     <div class="px-3 pb-3 bg-[#0a0a0a]">
                         ${commentsHtml}
-                        <div id="comment-box-${post.id}" class="hidden mt-2">
+                        <!-- Gunakan hiddenClass di sini juga -->
+                        <div id="comment-box-${post.id}" class="${hiddenClass} mt-2">
                             <div id="reply-indicator-${post.id}" class="text-[10px] mb-1 hidden font-mono pl-1 text-left w-full"></div>
                             <div class="flex gap-2">
                                 <input type="text" id="comment-input-${post.id}" class="flex-1 bg-[#111] border border-[#333] text-white text-xs p-2 outline-none font-mono" placeholder="Write reply..." onkeydown="if(event.key === 'Enter') window.submitComment('${post.id}')">
