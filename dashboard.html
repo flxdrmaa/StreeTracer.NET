@@ -97,9 +97,8 @@
 
             <div class="onion-box">
                 <div class="bg-[#111] p-3 border-b border-[#333] flex justify-between items-center">
-                    <span class="text-xs text-gray-400 font-bold">/// RACER CKUB</span>
-                    <!-- UBAH TOMBOL JADI REQUEST -->
-                    <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ADD YOUR CLUB]</button>
+                    <span class="text-xs text-gray-400 font-bold">/// CREW_LIST</span>
+                    <button onclick="window.openCreateClubModal()" class="text-[10px] bg-term-green/10 text-term-green px-2 py-0.5 border border-term-green/30 hover:bg-term-green hover:text-black transition">[ REQUEST ]</button>
                 </div>
                 <div id="club-list" class="flex flex-col text-xs max-h-[150px] lg:max-h-[400px] overflow-y-auto">
                     <div class="p-4 text-center text-gray-600">Scanning network...</div>
@@ -154,7 +153,7 @@
 
     <!-- MODALS -->
     
-    <!-- 1. DELETE CONFIRMATION -->
+    <!-- 1. DELETE CONFIRMATION MODAL -->
     <div id="modal-confirm" class="modal-overlay hidden">
         <div class="onion-box w-[90%] max-w-sm p-0 border border-term-red bg-black shadow-[0_0_30px_rgba(255,51,51,0.15)] animate-[pulse_1.5s_infinite]">
             <div class="bg-red-900/20 p-3 border-b border-term-red flex items-center justify-between">
@@ -163,28 +162,25 @@
             </div>
             <div class="p-5 text-center">
                 <p class="text-gray-300 text-xs font-mono leading-relaxed mb-4">
-                    Target data cluster will be permanently erased. <span class="text-white font-bold">IRREVERSIBLE ACTION.</span>
+                    Target data cluster will be permanently erased from the network node. This action is <span class="text-white font-bold">IRREVERSIBLE</span>.
                 </p>
                 <div class="flex justify-center gap-3 mt-2">
-                    <button onclick="window.closeModals()" class="text-gray-500 text-xs hover:text-white border border-gray-700 px-4 py-2 hover:border-gray-500 transition">ABORT</button>
-                    <button onclick="window.executeDelete()" class="bg-term-red text-black text-xs font-bold px-4 py-2 hover:bg-red-700 transition tracking-wider">CONFIRM DELETE</button>
+                    <button onclick="window.closeModals()" class="text-gray-500 text-xs hover:text-white border border-gray-700 px-4 py-2 hover:border-gray-500 transition">[ ABORT ]</button>
+                    <button onclick="window.executeDelete()" class="bg-term-red text-black text-xs font-bold px-4 py-2 hover:bg-red-700 transition tracking-wider">CONFIRM_ERASE</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 2. REQUEST CLUB MODAL (Updated Text) -->
+    <!-- 2. CREATE CLUB MODAL -->
     <div id="modal-create-club" class="modal-overlay hidden">
         <div class="onion-box w-[95%] max-w-md p-4 bg-black border border-term-green">
             <h2 class="text-term-green font-bold mb-4 border-b border-term-green pb-2">> REQUEST NEW CREW</h2>
             <div class="space-y-4">
                 <input type="text" id="input-crew-name" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green" placeholder="CREW NAME">
-                <textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green" rows="3" placeholder="DESCRIPTION / MANIFESTO"></textarea>
-                <div class="text-[10px] text-gray-500 text-center">
-                    *Request will be reviewed by admin nodes.
-                </div>
+                <textarea id="input-crew-desc" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm outline-none focus:border-term-green" rows="3" placeholder="DESCRIPTION"></textarea>
                 <div class="flex justify-end gap-2">
-                    <button onclick="window.closeModals()" class="text-gray-500 text-xs px-3">CANCEL</button>
+                    <button onclick="window.closeModals()" class="text-gray-500 text-xs px-3">[ CANCEL ]</button>
                     <button onclick="window.submitCreateClub()" class="onion-btn text-xs px-4 py-2 text-term-green border-term-green">SEND REQUEST</button>
                 </div>
             </div>
@@ -207,8 +203,16 @@
                     </div>
                 </div>
                 <div class="bg-[#0a0a0a] p-3 border border-[#333] text-xs text-gray-400 mb-4 wrap-text" id="modal-club-desc">...</div>
-                <div id="modal-club-status" class="hidden mb-4 text-center py-2 border border-yellow-900/50 bg-yellow-900/10 text-yellow-500 text-xs">STATUS: PENDING</div>
-                <button id="btn-join-club" class="onion-btn px-4 py-2 text-xs border-term-green text-term-green w-full">JOIN CREW</button>
+                
+                <!-- STATUS AREA -->
+                <div id="modal-club-status" class="hidden mb-4 text-center py-2 border text-xs font-bold">
+                    STATUS LOADING...
+                </div>
+
+                <!-- DYNAMIC BUTTON -->
+                <button id="btn-join-club" class="onion-btn px-4 py-2 text-xs border-term-green text-term-green w-full font-bold">
+                    [ INITIATE_LINK ]
+                </button>
             </div>
         </div>
     </div>
@@ -299,7 +303,7 @@
             }
         }
 
-        // 4. POST LOGIC
+        // 4. POST & COMMENT LOGIC
         window.submitPost = async function() {
             const contentInput = document.getElementById('post-content');
             const imgInput = document.getElementById('post-img-url');
@@ -323,7 +327,7 @@
                 fetch(DISCORD_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
                     username: "TOR_NODE",
                     avatar_url: "https://i.imgur.com/4M34hi2.png",
-                    embeds: [{ title: "Streetracer.NET", description: `\`\`\`${content}\`\`\``, color: 0, image: { url: imgUrl || null }, footer: { text: "ENCRYPTED_RELAY" } }]
+                    embeds: [{ title: "INCOMING_PACKET", description: `\`\`\`${content}\`\`\``, color: 0, image: { url: imgUrl || null }, footer: { text: "ENCRYPTED_RELAY" } }]
                 })}).catch(()=>{});
             }
 
@@ -334,99 +338,19 @@
             fetchFeed();
         }
 
-        // 5. CLUB LOGIC (WITH STATUS FILTER)
-        async function fetchClubs() {
-            const list = document.getElementById('club-list');
-            
-            // HANYA AMBIL YANG STATUSNYA 'approved'
-            const { data: crews } = await sbClient
-                .from('crews')
-                .select('*')
-                .eq('status', 'approved') 
-                .order('created_at', { ascending: false });
-
-            list.innerHTML = '';
-            if(!crews || crews.length === 0) { 
-                list.innerHTML = '<div class="p-4 text-center text-gray-800 italic text-[10px]">NO_ACTIVE_NODES</div>'; 
-                return; 
-            }
-            
-            crews.forEach(crew => {
-                const item = document.createElement('div');
-                item.className = "px-3 py-2 border-b border-[#222] hover:bg-[#111] cursor-pointer flex justify-between items-center group transition-colors";
-                item.innerHTML = `<div class="truncate pr-2 flex items-center gap-2"><span class="text-gray-600 group-hover:text-term-green">./</span><div class="text-gray-300 font-bold group-hover:text-white truncate">${crew.name}</div></div>`;
-                item.onclick = () => window.openClubDetail(crew.id, crew.name, crew.description, crew.created_by);
-                list.appendChild(item);
-            });
-        }
-
-        window.submitCreateClub = async function() {
-            const name = document.getElementById('input-crew-name').value.trim();
-            const desc = document.getElementById('input-crew-desc').value.trim();
-            if(!name) return window.showToast("ERROR", "NAME REQUIRED", true);
-            
-            // Insert dengan status default 'pending' (DB default)
-            const { data: crew, error } = await sbClient.from('crews').insert({ 
-                name: name, 
-                description: desc, 
-                created_by: currentUser.id,
-                status: 'pending' // Eksplisit
-            }).select().single();
-
-            if(error) return window.showToast("DB ERROR", error.message, true);
-            
-            // Tambahkan pembuat sebagai leader
-            await sbClient.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
-            
-            window.showToast("SYSTEM", "REQUEST SENT. AWAITING APPROVAL."); 
-            window.closeModals(); 
-            // fetchClubs tidak dipanggil karena club belum approved
-        }
-
-        window.openClubDetail = async function(id, name, desc, creatorId) {
-            document.getElementById('modal-club-info').classList.remove('hidden');
-            document.getElementById('modal-club-name').innerText = "./" + name;
-            document.getElementById('modal-club-desc').innerText = desc || "NO DATA";
-            const btnJoin = document.getElementById('btn-join-club');
-            btnJoin.disabled = false; btnJoin.innerText = "SEND_JOIN_REQUEST";
-            btnJoin.onclick = () => window.joinCrew(id);
-            let leaderName = "ANONYMOUS";
-            const { data: leader } = await sbClient.from('profiles').select('ic_name').eq('id', creatorId).single();
-            if(leader) leaderName = leader.ic_name;
-            document.getElementById('modal-club-leader').innerText = leaderName;
-            const { count } = await sbClient.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
-            document.getElementById('modal-club-count').innerText = count || 0;
-            const { data: myStatus } = await sbClient.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
-            const statusEl = document.getElementById('modal-club-status');
-            if(myStatus) {
-                btnJoin.disabled = true;
-                btnJoin.innerText = myStatus.status === 'pending' ? "PENDING..." : "ACCESS_GRANTED";
-                statusEl.innerText = "STATUS: " + myStatus.status.toUpperCase();
-                statusEl.classList.remove('hidden');
-            } else { statusEl.classList.add('hidden'); }
-        }
-
-        window.joinCrew = async function(crewId) {
-            const btn = document.getElementById('btn-join-club');
-            btn.innerText = "..."; btn.disabled = true;
-            const { error } = await sbClient.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
-            if(error) { window.showToast("ERROR", error.message, true); btn.disabled = false; }
-            else { window.showToast("SENT", "PACKET DELIVERED"); btn.innerText = "PENDING..."; }
-        }
-
-        // 6. FEED RENDERER & ACTIONS
         window.initReply = function(postId, commentId, username) {
             activeReplyId = commentId;
-            openCommentSections.add(postId); // Track open state
-            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
-            const section = document.getElementById(`comment-section-${postId}`);
-            if(section) section.classList.remove('hidden');
-
             const indicator = document.getElementById(`reply-indicator-${postId}`);
             if(indicator) {
                 indicator.innerHTML = `<span class="text-term-green animate-pulse">>> Replying to ${username || 'ANONYMOUS'}</span> <button onclick="window.cancelReply('${postId}')" class="text-red-500 hover:text-white ml-2 text-[10px]">[CANCEL]</button>`;
                 indicator.classList.remove('hidden');
             }
+            // OPEN BOX
+            openCommentSections.add(postId);
+            document.getElementById(`comment-box-${postId}`).classList.remove('hidden');
+            const section = document.getElementById(`comment-section-${postId}`);
+            if(section) section.classList.remove('hidden');
+
             document.getElementById(`comment-input-${postId}`).focus();
         }
 
@@ -451,8 +375,9 @@
 
             const { error } = await sbClient.from('comments').insert(payload);
             
-            if(error) { window.showToast("ERROR", "FAILED", true); } 
-            else { 
+            if(error) { 
+                window.showToast("ERROR", "FAILED", true); 
+            } else { 
                 input.value = ''; 
                 window.cancelReply(postId); 
                 fetchFeed(); 
@@ -463,6 +388,7 @@
         window.toggleComments = function(postId) {
             const box = document.getElementById(`comment-box-${postId}`);
             const section = document.getElementById(`comment-section-${postId}`);
+            
             if (openCommentSections.has(postId)) {
                 openCommentSections.delete(postId);
                 box.classList.add('hidden');
@@ -474,6 +400,7 @@
             }
         }
 
+        // 5. FEED RENDERER
         async function fetchFeed() {
             const container = document.getElementById('feed-container');
             const { data: posts, error } = await sbClient.from('posts').select('*, post_likes(user_id), comments(*)').order('created_at', { ascending: false }).limit(20);
@@ -489,15 +416,19 @@
                 const allComments = post.comments || [];
                 const rootComments = allComments.filter(c => !c.parent_id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                 
-                // CHECK STATE
+                // STATE CHECK
                 const isCommentOpen = openCommentSections.has(post.id);
                 const hiddenClass = isCommentOpen ? '' : 'hidden';
 
+                // RECURSIVE COMMENT
                 const renderComment = (comment, level = 0) => {
                     const children = allComments.filter(c => c.parent_id === comment.id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
                     const indent = level * 12; 
                     const isCommentOwner = comment.user_id === currentUser.id;
-                    const deleteBtn = isCommentOwner ? `<button onclick="window.confirmDeleteComment('${comment.id}')" class="text-term-red hover:text-white text-[9px] font-bold uppercase">[DEL]</button>` : '';
+
+                    const deleteBtn = isCommentOwner ? 
+                        `<button onclick="window.confirmDeleteComment('${comment.id}')" class="text-term-red hover:text-white text-[9px] font-bold uppercase">[DEL]</button>` : '';
+
                     const replyBtn = `<button onclick="window.initReply('${post.id}', '${comment.id}', 'ANONYMOUS')" class="text-gray-500 hover:text-white text-[9px] font-bold uppercase">[REPLY]</button>`;
 
                     let html = `
@@ -514,6 +445,7 @@
                             </div>
                         </div>
                     </div>`;
+
                     children.forEach(child => { html += renderComment(child, level + 1); });
                     return html;
                 };
@@ -526,28 +458,43 @@
                 }
 
                 let imgHtml = '';
-                if(post.image_url) { imgHtml = `<div class="post-image-container"><img src="${post.image_url}" alt="ATTACHMENT" loading="lazy"></div>`; }
+                if(post.image_url) {
+                    imgHtml = `<div class="post-image-container"><img src="${post.image_url}" alt="ATTACHMENT" loading="lazy"></div>`;
+                }
 
                 let deleteHtml = '';
-                if(isOwner) { deleteHtml = `<button onclick="window.confirmDeletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`; }
+                if(isOwner) {
+                    deleteHtml = `<button onclick="window.confirmDeletePost('${post.id}')" class="text-term-red hover:text-white p-1 ml-auto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                }
 
                 const html = `
                 <div class="onion-box p-0 mb-4 hover:border-gray-600 transition-colors animate-[pulse_0.2s_ease-out]">
                     <div class="bg-[#111] px-3 py-1.5 border-b border-[#333] flex justify-between items-center text-[10px] text-gray-500 font-mono">
                         <div><span class="text-white font-bold">ANONYMOUS</span></div>
-                        <div class="flex items-center gap-2"><span>ID:${post.id.substring(0,6)}</span>${deleteHtml}</div>
+                        <div class="flex items-center gap-2">
+                            <span>ID:${post.id.substring(0,6)}</span>
+                            ${deleteHtml}
+                        </div>
                     </div>
-                    <div class="p-4"><div class="text-sm text-gray-300 font-mono wrap-text leading-relaxed text-left w-full">${post.content}</div>${imgHtml}</div>
+                    
+                    <div class="p-4">
+                        <div class="text-sm text-gray-300 font-mono wrap-text leading-relaxed text-left w-full">${post.content}</div>
+                        ${imgHtml}
+                    </div>
+                    
                     <div class="px-3 py-2 border-t border-[#222] flex items-center justify-between bg-[#0a0a0a]">
                         <div class="flex gap-4">
                             <button onclick="window.toggleLike('${post.id}')" id="btn-like-${post.id}" class="flex items-center gap-1 ${isLiked ? 'text-term-green' : 'text-gray-600 hover:text-white'} transition">
-                                <i data-lucide="thumbs-up" class="w-4 h-4"></i><span class="text-xs font-bold">${likeCount > 0 ? likeCount : ''}</span>
+                                <i data-lucide="thumbs-up" class="w-4 h-4"></i>
+                                <span class="text-xs font-bold">${likeCount > 0 ? likeCount : ''}</span>
                             </button>
                             <button onclick="window.toggleComments('${post.id}')" class="flex items-center gap-1 text-gray-600 hover:text-white transition">
-                                <i data-lucide="message-square" class="w-4 h-4"></i><span class="text-xs font-bold">${allComments.length > 0 ? allComments.length : ''}</span>
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <span class="text-xs font-bold">${allComments.length > 0 ? allComments.length : ''}</span>
                             </button>
                         </div>
                     </div>
+
                     <div class="px-3 pb-3 bg-[#0a0a0a]">
                         ${commentsHtml}
                         <div id="comment-box-${post.id}" class="${hiddenClass} mt-2">
@@ -569,6 +516,7 @@
             const countSpan = btn.querySelector('span');
             let currentText = countSpan.innerText.trim();
             let count = currentText === '' ? 0 : parseInt(currentText);
+
             if (btn.classList.contains('text-term-green')) {
                 btn.classList.remove('text-term-green'); btn.classList.add('text-gray-600'); count--;
                 await sbClient.from('post_likes').delete().match({ user_id: currentUser.id, post_id: postId });
@@ -577,6 +525,99 @@
                 await sbClient.from('post_likes').insert({ user_id: currentUser.id, post_id: postId });
             }
             countSpan.innerText = count > 0 ? count : '';
+        }
+
+        // --- CLUB LOGIC ---
+        async function fetchClubs() {
+            const list = document.getElementById('club-list');
+            const { data: crews } = await sbClient.from('crews').select('*').eq('status', 'approved').order('created_at', { ascending: false });
+
+            list.innerHTML = '';
+            if(!crews || crews.length === 0) { list.innerHTML = '<div class="p-4 text-center text-gray-800 italic text-[10px]">NO_ACTIVE_NODES</div>'; return; }
+            
+            crews.forEach(crew => {
+                const item = document.createElement('div');
+                item.className = "px-3 py-2 border-b border-[#222] hover:bg-[#111] cursor-pointer flex justify-between items-center group transition-colors";
+                item.innerHTML = `<div class="truncate pr-2 flex items-center gap-2"><span class="text-gray-600 group-hover:text-term-green">./</span><div class="text-gray-300 font-bold group-hover:text-white truncate">${crew.name}</div></div>`;
+                item.onclick = () => window.openClubDetail(crew.id, crew.name, crew.description, crew.created_by);
+                list.appendChild(item);
+            });
+        }
+
+        window.submitCreateClub = async function() {
+            const name = document.getElementById('input-crew-name').value.trim();
+            const desc = document.getElementById('input-crew-desc').value.trim();
+            if(!name) return window.showToast("ERROR", "NAME REQUIRED", true);
+            const { data: crew, error } = await sbClient.from('crews').insert({ name: name, description: desc, created_by: currentUser.id, status: 'pending' }).select().single();
+            if(error) return window.showToast("DB ERROR", error.message, true);
+            await sbClient.from('crew_members').insert({ crew_id: crew.id, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'leader' });
+            window.showToast("SYSTEM", "REQUEST SENT. AWAITING APPROVAL."); window.closeModals();
+        }
+
+        // --- OPEN DETAIL LOGIC (Link to Comms) ---
+        window.openClubDetail = async function(id, name, desc, creatorId) {
+            document.getElementById('modal-club-info').classList.remove('hidden');
+            document.getElementById('modal-club-name').innerText = "./" + name;
+            document.getElementById('modal-club-desc').innerText = desc || "NO DATA";
+            const btnJoin = document.getElementById('btn-join-club');
+            const statusEl = document.getElementById('modal-club-status');
+            
+            // Default State
+            btnJoin.disabled = false; 
+            btnJoin.innerText = "CHECKING ENCRYPTION...";
+            btnJoin.onclick = null;
+            statusEl.classList.add('hidden');
+
+            let leaderName = "ANONYMOUS";
+            const { data: leader } = await sbClient.from('profiles').select('ic_name').eq('id', creatorId).single();
+            if(leader) leaderName = leader.ic_name;
+            document.getElementById('modal-club-leader').innerText = leaderName;
+            
+            const { count } = await sbClient.from('crew_members').select('*', { count: 'exact', head: true }).eq('crew_id', id);
+            document.getElementById('modal-club-count').innerText = count || 0;
+
+            // CHECK MEMBERSHIP
+            const { data: myStatus } = await sbClient.from('crew_members').select('status').eq('crew_id', id).eq('user_id', currentUser.id).single();
+            
+            if(myStatus) {
+                if (myStatus.status === 'pending') {
+                    // PENDING
+                    btnJoin.disabled = true;
+                    btnJoin.innerText = "AWAITING APPROVAL";
+                    btnJoin.className = "onion-btn px-4 py-2 text-xs border-yellow-700 text-yellow-500 w-full font-bold opacity-50 cursor-not-allowed";
+                    
+                    statusEl.innerText = "STATUS: PENDING REVIEW";
+                    statusEl.className = "mb-4 text-center py-2 border border-yellow-900/50 bg-yellow-900/10 text-yellow-500 text-xs font-bold block";
+                } else {
+                    // MEMBER / LEADER -> ACCESS COMMS
+                    btnJoin.innerText = ">> ACCESS_COMMS_NODE";
+                    btnJoin.className = "onion-btn px-4 py-2 text-xs border-term-green bg-term-green/10 text-term-green w-full font-bold hover:bg-term-green hover:text-black";
+                    btnJoin.onclick = () => window.location.href = 'club.html';
+                    
+                    statusEl.innerText = "ACCESS GRANTED: " + myStatus.status.toUpperCase();
+                    statusEl.className = "mb-4 text-center py-2 border border-green-900/50 bg-green-900/10 text-term-green text-xs font-bold block";
+                }
+            } else {
+                // NOT A MEMBER
+                btnJoin.innerText = "[ SEND_JOIN_REQUEST ]";
+                btnJoin.className = "onion-btn px-4 py-2 text-xs border-term-green text-term-green w-full font-bold hover:bg-term-green hover:text-black";
+                btnJoin.onclick = () => window.joinCrew(id);
+                statusEl.classList.add('hidden');
+            }
+        }
+
+        window.joinCrew = async function(crewId) {
+            const btn = document.getElementById('btn-join-club');
+            btn.innerText = "..."; btn.disabled = true;
+            const { error } = await sbClient.from('crew_members').insert({ crew_id: crewId, user_id: currentUser.id, ic_name: currentUser.ic_name, status: 'pending' });
+            if(error) { window.showToast("ERROR", error.message, true); btn.disabled = false; }
+            else { 
+                window.showToast("SENT", "PACKET DELIVERED"); 
+                // Refresh modal to show pending state
+                window.openClubDetail(crewId, document.getElementById('modal-club-name').innerText.substring(2), document.getElementById('modal-club-desc').innerText, null); // Creator ID null trigger re-fetch basically 
+                // Better: just close modal
+                window.closeModals();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
